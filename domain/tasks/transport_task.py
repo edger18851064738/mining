@@ -40,9 +40,10 @@ class TransportTask(Task):
     transportation, and unloading phases.
     """
     
-    def __init__(self, task_id: Optional[str] = None,
+    def __init__(self, 
                 start_point: Union[Point2D, Tuple[float, float]],
                 end_point: Union[Point2D, Tuple[float, float]],
+                task_id: Optional[str] = None,
                 task_type: str = "transport",
                 material_type: str = "ore",
                 amount: float = 50000.0,
@@ -487,8 +488,9 @@ class LoadingTask(TransportTask):
     Focuses on the loading phase of a transport operation.
     """
     
-    def __init__(self, task_id: Optional[str] = None,
+    def __init__(self,
                 loading_point: Union[Point2D, Tuple[float, float]],
+                task_id: Optional[str] = None,
                 material_type: str = "ore",
                 amount: float = 50000.0,
                 priority: Union[int, TaskPriority] = TaskPriority.NORMAL,
@@ -621,8 +623,9 @@ class UnloadingTask(TransportTask):
     Focuses on the unloading phase of a transport operation.
     """
     
-    def __init__(self, task_id: Optional[str] = None,
+    def __init__(self, 
                 unloading_point: Union[Point2D, Tuple[float, float]],
+                task_id: Optional[str] = None,
                 material_type: str = "ore",
                 amount: float = 50000.0,
                 priority: Union[int, TaskPriority] = TaskPriority.NORMAL,
