@@ -1290,3 +1290,185 @@ interpolate_vectors(v1: Vector2D, v2: Vector2D, t: float) -> Vector2D
 angle_between_vectors(v1: Vector2D, v2: Vector2D) -> float
 signed_angle_2d(v1: Vector2D, v2: Vector2D) -> float
 reflect_vector(vector: Vector2D, normal: Vector2D) -> Vector2D
+
+Environment模块类和函数整理
+1. coordinates/point.py
+EnvironmentPoint2D(BasePoint2D)
+
+__init__(x: float, y: float, properties: dict = None)
+with_property(key: str, value: Any) -> EnvironmentPoint2D
+with_properties(properties: dict) -> EnvironmentPoint2D
+get_property(key: str, default: Any = None) -> Any
+has_property(key: str) -> bool
+from_base(point: BasePoint2D, properties: dict = None) -> EnvironmentPoint2D (类方法)
+to_base() -> BasePoint2D
+
+EnvironmentPoint3D(BasePoint3D)
+
+__init__(x: float, y: float, z: float, properties: dict = None)
+with_property(key: str, value: Any) -> EnvironmentPoint3D
+with_properties(properties: dict) -> EnvironmentPoint3D
+get_property(key: str, default: Any = None) -> Any
+has_property(key: str) -> bool
+from_base(point: BasePoint3D, properties: dict = None) -> EnvironmentPoint3D (类方法)
+to_base() -> BasePoint3D
+to_2d() -> EnvironmentPoint2D
+
+2. coordinates/transforms.py
+EnvironmentTransformer
+
+__init__(grid_size: float = 1.0, origin: Point2D = None, elevation_base: float = 0.0)
+world_to_grid(point: Union[Point2D, EnvironmentPoint2D]) -> EnvironmentPoint2D
+grid_to_world(point: Union[Point2D, EnvironmentPoint2D]) -> EnvironmentPoint2D
+elevation_to_world(elevation: float) -> float
+world_to_elevation(world_elevation: float) -> float
+world_to_grid_3d(point: Union[Point3D, EnvironmentPoint3D]) -> EnvironmentPoint3D
+grid_to_world_3d(point: Union[Point3D, EnvironmentPoint3D]) -> EnvironmentPoint3D
+register_property_transformer(property_name: str, world_to_grid_func: callable, grid_to_world_func: callable) -> None
+_transform_properties(properties: Dict[str, Any], direction: str) -> Dict[str, Any] (私有方法)
+transform_path(path: List[Union[Point2D, EnvironmentPoint2D]], direction: str) -> List[EnvironmentPoint2D]
+
+3. map/interfaces.py
+MapError(Exception)
+MapNode
+
+__init__(node_id: str = None, position: Point2D = None, node_type: str = "regular", properties: Dict[str, Any] = None)
+__repr__() -> str
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> MapNode (类方法)
+
+MapEdge
+
+__init__(edge_id: str = None, start_node: str = None, end_node: str = None, edge_type: str = "regular", properties: Dict[str, Any] = None)
+__repr__() -> str
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> MapEdge (类方法)
+
+Map(ABC, Serializable)
+
+__init__(map_id: str = None, name: str = "map")
+get_node(node_id: str) -> Optional[MapNode] (抽象方法)
+get_edge(edge_id: str) -> Optional[MapEdge] (抽象方法)
+add_node(node: MapNode) -> str (抽象方法)
+add_edge(edge: MapEdge) -> str (抽象方法)
+remove_node(node_id: str) -> bool (抽象方法)
+remove_edge(edge_id: str) -> bool (抽象方法)
+get_nodes() -> List[MapNode] (抽象方法)
+get_edges() -> List[MapEdge] (抽象方法)
+get_connected_nodes(node_id: str) -> List[MapNode] (抽象方法)
+get_node_edges(node_id: str) -> List[MapEdge] (抽象方法)
+find_path(start_node_id: str, end_node_id: str, weight_property: str = "weight") -> List[str] (抽象方法)
+find_nearest_node(position: Point2D, filter_func: Optional[callable] = None) -> Optional[str] (抽象方法)
+get_bounds() -> BoundingBox (抽象方法)
+to_dict() -> Dict[str, Any] (抽象方法)
+from_dict(data: Dict[str, Any]) -> Map (抽象类方法)
+
+4. map/grid_map.py
+GridCell
+
+__init__(cell_id: str = None, row: int = 0, col: int = 0, passable: bool = True, properties: Dict[str, Any] = None)
+__repr__() -> str
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> GridCell (类方法)
+
+GridMap(Map)
+
+__init__(map_id: str = None, name: str = "grid_map", rows: int = 100, cols: int = 100, cell_size: float = 1.0, origin: Point2D = None)
+_initialize_grid() -> None (私有方法)
+_initialize_connectivity() -> None (私有方法)
+cell_to_world(row: int, col: int) -> Point2D
+world_to_cell(position: Point2D) -> Tuple[int, int]
+is_valid_cell(row: int, col: int) -> bool
+get_cell(row: int, col: int) -> Optional[GridCell]
+get_cell_by_position(position: Point2D) -> Optional[GridCell]
+get_cell_by_id(cell_id: str) -> Optional[GridCell]
+set_cell_passable(row: int, col: int, passable: bool) -> bool
+_update_cell_connectivity(cell: GridCell) -> None (私有方法)
+(以及Map接口的所有实现方法)
+
+5. map/road_network.py
+RoadType
+
+常量: MAIN, SECONDARY, ACCESS, TRANSIT, RESTRICTED
+
+RoadNetwork(Map)
+
+__init__(map_id: str = None, name: str = "road_network")
+_update_spatial_index() -> None (私有方法)
+add_junction(position: Point2D, node_type: str = "junction", properties: Dict[str, Any] = None) -> str
+add_road(start_node_id: str, end_node_id: str, road_type: str = RoadType.MAIN, bidirectional: bool = True, properties: Dict[str, Any] = None) -> List[str]
+generate_grid_network(rows: int, cols: int, cell_size: float, origin: Point2D = None) -> None
+generate_radial_network(center: Point2D, radius: float, num_radials: int, num_rings: int) -> None
+(以及Map接口的所有实现方法)
+
+6. terrain/features.py
+枚举类
+
+TerrainType(Enum): FLAT, SLOPE, HILL, VALLEY, EXCAVATION, ROAD, WATER, RESTRICTED
+SlopeDirection(Enum): NORTH, NORTHEAST, EAST, SOUTHEAST, SOUTH, SOUTHWEST, WEST, NORTHWEST
+MaterialType(Enum): DIRT, CLAY, SAND, GRAVEL, LOOSE_ROCK, SOLID_ROCK, ORE, WASTE, WATER
+
+TerrainFeature
+
+__init__(feature_id: str = None, name: str = None, bounds: BoundingBox = None, properties: Dict[str, Any] = None)
+contains_point(point: Point2D) -> bool
+get_elevation(point: Point2D) -> float
+get_slope(point: Point2D) -> Tuple[float, SlopeDirection]
+get_hardness(point: Point2D) -> float
+get_material(point: Point2D) -> MaterialType
+is_traversable(point: Point2D, vehicle_properties: Dict[str, Any] = None) -> bool
+get_traversal_cost(point: Point2D, vehicle_properties: Dict[str, Any] = None) -> float
+to_dict() -> Dict[str, Any]
+
+各种地形特征类
+
+SlopeFeature(TerrainFeature)
+HillFeature(TerrainFeature)
+ExcavationFeature(TerrainFeature)
+RoadFeature(TerrainFeature)
+WaterFeature(TerrainFeature)
+RestrictedAreaFeature(TerrainFeature)
+
+(每个类都有特有的初始化参数和方法，包括构造函数和重写的基类方法)
+7. terrain/analyzer.py
+枚举和异常类
+
+AnalysisResolution(Enum): LOW, MEDIUM, HIGH, ULTRA
+AnalysisMode(Enum): TRAVERSABILITY, EXCAVATION, SAFETY, EFFICIENCY, ENVIRONMENTAL
+TerrainAnalysisError(Exception)
+
+TerrainAnalyzer
+
+__init__(features: Optional[List[TerrainFeature]] = None, resolution: AnalysisResolution = AnalysisResolution.MEDIUM)
+add_feature(feature: TerrainFeature) -> None
+remove_feature(feature_id: str) -> bool
+get_elevation(point: Point2D) -> float
+get_features_at_point(point: Point2D) -> List[TerrainFeature]
+get_terrain_property(point: Point2D, property_name: str) -> Union[float, MaterialType, TerrainType]
+is_traversable(point: Point2D, vehicle_properties: Dict[str, Any] = None) -> bool
+get_traversal_cost(point: Point2D, vehicle_properties: Dict[str, Any] = None) -> float
+analyze_region(region: BoundingBox, grid_size: float, analysis_type: str) -> Dict[str, Any]
+find_obstacle_free_path(start: Point2D, end: Point2D, vehicle_properties: Dict[str, Any] = None, grid_size: float = 5.0) -> List[Point2D]
+find_slope_features(min_angle: float = 15.0) -> List[SlopeFeature]
+find_excavation_features() -> List[ExcavationFeature]
+find_road_features() -> List[RoadFeature]
+find_feature_by_id(feature_id: str) -> Optional[TerrainFeature]
+find_nearest_feature(point: Point2D, feature_type: Optional[type] = None) -> Optional[TerrainFeature]
+identify_hazard_areas(vehicle_properties: Dict[str, Any] = None) -> List[BoundingBox]
+generate_traversability_map(region: BoundingBox, grid_size: float, vehicle_properties: Dict[str, Any] = None) -> Dict[str, Any]
+get_elevation_profile(path: List[Point2D]) -> List[float]
+find_optimal_path(start: Point2D, end: Point2D, vehicle_properties: Dict[str, Any], cost_factors: Dict[str, float] = None) -> List[Point2D]
+
+TerrainDifferenceAnalyzer
+
+__init__(baseline_analyzer: TerrainAnalyzer, current_analyzer: TerrainAnalyzer)
+find_elevation_changes(region: BoundingBox, grid_size: float, threshold: float = 0.5) -> Dict[str, Any]
+identify_new_features() -> List[TerrainFeature]
+identify_modified_features() -> List[Tuple[TerrainFeature, TerrainFeature]]
+
+HeatMapGenerator
+
+__init__(terrain_analyzer: TerrainAnalyzer)
+generate_traversability_heatmap(region: BoundingBox, grid_size: float, vehicle_properties: Dict[str, Any] = None) -> Dict[str, Any]
+generate_property_heatmap(region: BoundingBox, grid_size: float, property_name: str) -> Dict[str, Any]
+generate_path_safety_heatmap(region: BoundingBox, grid_size: float, hazard_areas: List[BoundingBox]) -> Dict[str, Any]
