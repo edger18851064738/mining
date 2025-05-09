@@ -1472,3 +1472,314 @@ __init__(terrain_analyzer: TerrainAnalyzer)
 generate_traversability_heatmap(region: BoundingBox, grid_size: float, vehicle_properties: Dict[str, Any] = None) -> Dict[str, Any]
 generate_property_heatmap(region: BoundingBox, grid_size: float, property_name: str) -> Dict[str, Any]
 generate_path_safety_heatmap(region: BoundingBox, grid_size: float, hazard_areas: List[BoundingBox]) -> Dict[str, Any]
+
+露天矿多车协同调度系统 - Coordination 模块类与函数概览
+1. coordination/dispatcher 模块
+base.py
+枚举类
+
+DispatchStatus(Enum): 调度操作状态
+
+IDLE, RUNNING, PAUSED, ERROR
+
+
+DispatchStrategy(Enum): 调度策略
+
+FIFO, PRIORITY, NEAREST, BALANCED, OPTIMIZED
+
+
+
+异常类
+
+DispatchError(Exception): 调度错误基类
+VehicleNotFoundError(DispatchError): 车辆未找到错误
+TaskNotFoundError(DispatchError): 任务未找到错误
+
+配置类
+
+DispatcherConfig
+
+__init__(dispatch_interval: float = 1.0, dispatch_strategy: DispatchStrategy = DispatchStrategy.OPTIMIZED, max_tasks_per_vehicle: int = 5, replan_on_change: bool = True, conflict_resolution_enabled: bool = True, **kwargs)
+
+
+
+核心类
+
+Dispatcher(abc.ABC, Serializable): 调度器抽象基类
+
+__init__(config: Optional[DispatcherConfig] = None)
+add_vehicle(vehicle) -> None (抽象)
+remove_vehicle(vehicle_id: str) -> bool (抽象)
+get_vehicle(vehicle_id: str) (抽象)
+get_all_vehicles() -> dict (抽象)
+add_task(task) -> None (抽象)
+remove_task(task_id: str) -> bool (抽象)
+get_task(task_id: str) (抽象)
+get_all_tasks() -> dict (抽象)
+assign_task(task_id: str, vehicle_id: str) -> bool (抽象)
+get_assignments() -> Dict[str, List[str]] (抽象)
+dispatch_cycle() -> None (抽象)
+start() -> None (抽象)
+stop() -> None (抽象)
+pause() -> None (抽象)
+resume() -> None (抽象)
+status属性 (只读)
+add_event_listener(event_type: EventType, listener: EventListener) -> None
+remove_event_listener(event_type: EventType, listener: EventListener) -> None
+dispatch_event(event: DispatchEvent) -> None
+to_dict() -> Dict[str, Any]
+
+
+
+dispatch_events.py
+枚举类
+
+EventType(Enum): 事件类型
+
+ALL, VEHICLE_ADDED, VEHICLE_REMOVED, VEHICLE_STATE_CHANGED, VEHICLE_POSITION_CHANGED,
+TASK_ADDED, TASK_ASSIGNED, TASK_STARTED, TASK_COMPLETED, TASK_FAILED, TASK_CANCELED,
+DISPATCH_CYCLE_STARTED, DISPATCH_CYCLE_COMPLETED, DISPATCH_DECISION_MADE,
+PATH_PLANNED, PATH_REPLANNED,
+CONFLICT_DETECTED, CONFLICT_RESOLVED,
+SYSTEM_ERROR, SYSTEM_WARNING, SYSTEM_INFO
+
+
+
+事件类
+
+DispatchEvent: 所有调度事件的基类
+
+__init__(event_type: EventType, timestamp: datetime = None)
+to_dict() -> Dict[str, Any]
+
+
+VehicleEvent(DispatchEvent): 车辆相关事件
+
+__init__(event_type: EventType, vehicle_id: str, details: Optional[Dict[str, Any]] = None)
+to_dict() -> Dict[str, Any]
+
+
+TaskEvent(DispatchEvent): 任务相关事件
+
+__init__(event_type: EventType, task_id: str, details: Optional[Dict[str, Any]] = None)
+to_dict() -> Dict[str, Any]
+
+
+AssignmentEvent(DispatchEvent): 任务分配事件
+
+__init__(event_type: EventType, task_id: str, vehicle_id: str, details: Optional[Dict[str, Any]] = None)
+to_dict() -> Dict[str, Any]
+
+
+PathEvent(DispatchEvent): 路径规划事件
+
+__init__(event_type: EventType, vehicle_id: str, path_points: List[Point2D], details: Optional[Dict[str, Any]] = None)
+to_dict() -> Dict[str, Any]
+
+
+ConflictEvent(DispatchEvent): 冲突检测与解决事件
+
+__init__(event_type: EventType, vehicle_ids: List[str], conflict_location: Optional[Point2D] = None, details: Optional[Dict[str, Any]] = None)
+to_dict() -> Dict[str, Any]
+
+
+SystemEvent(DispatchEvent): 系统事件
+
+__init__(event_type: EventType, message: str, details: Optional[Dict[str, Any]] = None)
+to_dict() -> Dict[str, Any]
+
+
+
+事件监听和分发
+
+EventListener: 事件监听器接口
+
+on_event(event: DispatchEvent) -> None
+
+
+EventDispatcher: 事件分发器
+
+__init__()
+add_listener(event_type: EventType, listener: EventListener) -> None
+remove_listener(event_type: EventType, listener: EventListener) -> None
+dispatch_event(event: DispatchEvent) -> None
+
+
+
+mining_dispatcher.py
+核心类
+
+MiningDispatcher(Dispatcher): 矿山调度器
+
+__init__(environment=None, config: Optional[DispatcherConfig] = None)
+add_vehicle(vehicle) -> None (实现)
+remove_vehicle(vehicle_id: str) -> bool (实现)
+get_vehicle(vehicle_id: str) (实现)
+get_all_vehicles() -> dict (实现)
+add_task(task) -> None (实现)
+remove_task(task_id: str) -> bool (实现)
+get_task(task_id: str) (实现)
+get_all_tasks() -> dict (实现)
+assign_task(task_id: str, vehicle_id: str) -> bool (实现)
+get_assignments() -> Dict[str, List[str]] (实现)
+dispatch_cycle() -> None (实现)
+start() -> None (实现)
+stop() -> None (实现)
+pause() -> None (实现)
+resume() -> None (实现)
+to_dict() -> Dict[str, Any] (实现)
+
+
+
+私有方法
+
+_init_allocator() -> None
+_init_conflict_resolver() -> None
+_rebuild_pending_tasks() -> None
+_update_vehicles() -> None
+_update_tasks() -> None
+_allocate_tasks() -> None
+_simple_allocation(available_vehicles, pending_tasks)
+_can_handle_task(vehicle, task) -> bool
+_plan_paths() -> None
+_resolve_conflicts() -> None
+_dispatch_loop() -> None
+
+2. coordination/simulation 模块
+simulation_clock.py
+枚举类
+
+ClockStatus(Enum): 时钟状态
+
+STOPPED, RUNNING, PAUSED
+
+
+TimeUpdateMode(Enum): 时间更新模式
+
+REAL_TIME, SCALED_TIME, STEPPED, EVENT_BASED
+
+
+
+事件类
+
+ScheduledEvent: 调度事件
+
+__init__(sim_time: float, event_id: int, callback: Callable, data: Any = None)
+__lt__(other) - 用于优先队列排序
+
+
+
+核心类
+
+SimulationClock: 仿真时钟
+
+__init__(initial_time: Optional[datetime] = None, speed_factor: float = 1.0, update_mode: TimeUpdateMode = TimeUpdateMode.SCALED_TIME, update_interval: float = 0.1)
+属性:
+
+current_time (只读)
+current_time_float (只读)
+elapsed_time (只读)
+elapsed_seconds (只读)
+status (只读)
+speed_factor (读写)
+update_mode (读写)
+
+
+方法:
+
+start() -> None
+stop() -> None
+pause() -> None
+resume() -> None
+set_time(new_time: datetime) -> None
+advance(delta: timedelta) -> None
+schedule_event(delay: float, callback: Callable, data: Any = None) -> int
+schedule_at(time_point: datetime, callback: Callable, data: Any = None) -> int
+cancel_event(event_id: int) -> bool
+add_time_listener(listener: Callable[[datetime], None]) -> None
+remove_time_listener(listener: Callable[[datetime], None]) -> None
+
+
+
+
+
+私有方法
+
+_notify_time_listeners() -> None
+_update_loop() -> None
+_update_time() -> None
+_process_events_until(until_time: datetime) -> None
+
+simulator.py
+枚举类
+
+SimulationStatus(Enum): 仿真状态
+
+STOPPED, RUNNING, PAUSED, COMPLETED, ERROR
+
+
+
+配置类
+
+SimulationConfig: 仿真配置
+
+__init__(duration: Optional[timedelta] = None, seed: Optional[int] = None, log_level: str = "INFO", real_time_factor: float = 10.0, task_generation_rate: float = 1.0, vehicle_count: int = 5, environment_size: Tuple[int, int] = (1000, 1000), **kwargs)
+
+
+
+数据类
+
+SimulationMetrics: 仿真指标
+
+各种指标属性
+update_efficiency_metrics() -> None
+
+
+
+监听器类
+
+SimulationEventListener(EventListener): 仿真事件监听器
+
+__init__(simulator)
+on_event(event: DispatchEvent) -> None
+
+
+
+核心类
+
+Simulator(Serializable): 仿真器
+
+__init__(environment=None, dispatcher=None, config: Optional[SimulationConfig] = None)
+属性:
+
+status (只读)
+
+
+方法:
+
+setup() -> None
+start() -> None
+stop() -> None
+pause() -> None
+resume() -> None
+step(time_step: float = 1.0) -> None
+run_until(end_time: datetime) -> None
+run_for(duration: timedelta) -> None
+get_metrics() -> SimulationMetrics
+to_dict() -> Dict[str, Any]
+
+
+
+
+
+私有方法
+
+_create_environment() -> None
+_create_dispatcher() -> None
+_create_vehicles() -> None
+_create_initial_tasks() -> None
+_generate_random_task() -> Any
+_schedule_task_generation() -> None
+_generate_task() -> None
+_update_metrics() -> None
+_finalize_metrics() -> None
