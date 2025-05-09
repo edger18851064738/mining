@@ -1,0 +1,5583 @@
+# 露天矿多车协同调度系统 - 代码文档
+
+## 文档目的
+
+本文档记录露天矿多车协同调度系统的所有类和函数，提供完整的API参考，便于调试和维护。
+
+## 目录结构
+
+- [1. 领域模型层 (Domain Model)](#1-领域模型层-domain-model)
+- [2. 算法服务层 (Algorithm Services)](#2-算法服务层-algorithm-services)
+- [3. 协调调度层 (Coordination)](#3-协调调度层-coordination)
+- [4. 地图与环境层 (Map & Environment)](#4-地图与环境层-map--environment)
+- [5. 界面层 (UI)](#5-界面层-ui)
+- [6. 支持工具层 (Utilities)](#6-支持工具层-utilities)
+
+## 类图和关系
+
+[此处可以插入关键类的UML图]
+
+---
+
+## 1. 领域模型层 (Domain Model)
+
+### 1.1 vehicles 模块
+
+1.1.1 Vehicle (base.py)
+描述: 所有车辆类型的抽象基类，定义了所有车辆必须实现的通用接口和行为。
+pythonclass Vehicle(ABC, Serializable):
+    """
+    抽象车辆基类
+    """
+    
+    def __init__(self, vehicle_id: Optional[str] = None):
+        """
+        初始化车辆
+        
+        参数:
+            vehicle_id (Optional[str]): 车辆唯一标识符(如未提供则自动生成)
+        """
+        # 实现代码...
+    
+    @property
+    def current_location(self) -> Point2D:
+        """
+        获取车辆当前位置
+        
+        返回:
+            Point2D: 当前位置坐标
+        """
+        # 实现代码...
+    
+    @current_location.setter
+    def current_location(self, location: Union[Point2D, Tuple[float, float]]) -> None:
+        """
+        设置车辆当前位置
+        
+        参数:
+            location (Union[Point2D, Tuple[float, float]]): 新位置(Point2D对象或坐标元组)
+        
+        异常:
+            ValueError: 如果位置格式无效
+        """
+        # 实现代码...
+    
+    @property
+    def heading(self) -> float:
+        """
+        获取当前航向角(弧度)
+        
+        返回:
+            float: 航向角(弧度，0表示东，π/2表示北)
+        """
+        # 实现代码...
+    
+    @heading.setter
+    def heading(self, angle: float) -> None:
+        """
+        设置航向角
+        
+        参数:
+            angle (float): 航向角(弧度)
+        """
+        # 实现代码...
+    
+    @property
+    def heading_degrees(self) -> float:
+        """
+        获取当前航向角(度)
+        
+        返回:
+            float: 航向角(度)
+        """
+        # 实现代码...
+    
+    @heading_degrees.setter
+    def heading_degrees(self, angle: float) -> None:
+        """
+        设置航向角(度)
+        
+        参数:
+            angle (float): 航向角(度)
+        """
+        # 实现代码...
+    
+    @property
+    def current_path(self) -> List[Point2D]:
+        """
+        获取当前正在跟随的路径
+        
+        返回:
+            List[Point2D]: 路径点列表
+        """
+        # 实现代码...
+    
+    @current_path.setter
+    def current_path(self, path: List[Union[Point2D, Tuple[float, float]]]) -> None:
+        """
+        设置当前路径
+        
+        参数:
+            path (List[Union[Point2D, Tuple[float, float]]]): 组成路径的点列表
+        
+        异常:
+            ValueError: 如果路径点格式无效
+        """
+        # 实现代码...
+    
+    @property
+    def path_index(self) -> int:
+        """
+        获取当前路径索引
+        
+        返回:
+            int: 路径索引
+        """
+        # 实现代码...
+    
+    @path_index.setter
+    def path_index(self, index: int) -> None:
+        """
+        设置当前路径索引
+        
+        参数:
+            index (int): 路径索引
+            
+        异常:
+            IndexError: 如果索引超出范围
+        """
+        # 实现代码...
+    
+    @property
+    def remaining_path(self) -> List[Point2D]:
+        """
+        获取当前路径中剩余的点
+        
+        返回:
+            List[Point2D]: 剩余路径点
+        """
+        # 实现代码...
+    
+    @property
+    def next_waypoint(self) -> Optional[Point2D]:
+        """
+        获取路径中的下一个航点，如果已到路径末尾则返回None
+        
+        返回:
+            Optional[Point2D]: 下一个航点或None
+        """
+        # 实现代码...
+    
+    @property
+    def is_at_path_end(self) -> bool:
+        """
+        检查车辆是否已到达路径末尾
+        
+        返回:
+            bool: 如果车辆已到达路径末尾则为True
+        """
+        # 实现代码...
+    
+    @property
+    @abstractmethod
+    def state(self) -> str:
+        """
+        获取车辆当前状态
+        
+        返回:
+            str: 状态标识符
+        """
+        pass
+    
+    @abstractmethod
+    def update_position(self) -> None:
+        """
+        根据移动模型更新车辆位置
+        
+        此方法表示车辆的一个模拟步骤
+        """
+        pass
+    
+    @abstractmethod
+    def calculate_path_to(self, destination: Point2D) -> List[Point2D]:
+        """
+        计算从当前位置到目的地的路径
+        
+        参数:
+            destination (Point2D): 目标位置
+            
+        返回:
+            List[Point2D]: 计算出的路径
+        """
+        pass
+    
+    @abstractmethod
+    def assign_path(self, path: List[Union[Point2D, Tuple[float, float]]]) -> None:
+        """
+        为车辆分配新路径
+        
+        参数:
+            path (List[Union[Point2D, Tuple[float, float]]]): 组成路径的点列表
+        """
+        pass
+    
+    @abstractmethod
+    def assign_task(self, task) -> None:
+        """
+        为车辆分配任务
+        
+        参数:
+            task: 要分配的任务
+        """
+        pass
+    
+    def move_to_next_waypoint(self) -> bool:
+        """
+        移动到路径中的下一个航点
+        
+        返回:
+            bool: 如果成功移动则为True，如果已到路径末尾则为False
+        """
+        # 实现代码...
+    
+    def distance_to(self, point: Union[Point2D, Tuple[float, float]]) -> float:
+        """
+        计算车辆当前位置到某点的距离
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 目标点
+            
+        返回:
+            float: 到目标点的距离
+        """
+        # 实现代码...
+    
+    def direction_to(self, point: Union[Point2D, Tuple[float, float]]) -> Vector2D:
+        """
+        计算车辆当前位置到某点的方向向量
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 目标点
+            
+        返回:
+            Vector2D: 方向向量(归一化)
+        """
+        # 实现代码...
+    
+    def angle_to(self, point: Union[Point2D, Tuple[float, float]]) -> float:
+        """
+        计算车辆航向与到某点方向之间的角度
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 目标点
+            
+        返回:
+            float: 角度差(弧度)
+        """
+        # 实现代码...
+    
+    def reset_path(self) -> None:
+        """
+        清除当前路径
+        """
+        # 实现代码...
+1.1.2 ConstrainedVehicle (base.py)
+描述: 具有物理约束的车辆基类，扩展了基本Vehicle类，增加了物理特性和约束，如尺寸、转弯半径和速度限制。
+pythonclass ConstrainedVehicle(Vehicle):
+    """
+    具有物理约束的车辆基类
+    """
+    
+    def __init__(self, vehicle_id: Optional[str] = None, 
+                 max_speed: float = 5.0,
+                 max_acceleration: float = 2.0,
+                 max_deceleration: float = 4.0,
+                 turning_radius: float = 10.0,
+                 length: float = 5.0,
+                 width: float = 2.0):
+        """
+        初始化具有约束的车辆
+        
+        参数:
+            vehicle_id (Optional[str]): 车辆唯一标识符
+            max_speed (float): 最大速度(m/s)
+            max_acceleration (float): 最大加速度(m/s²)
+            max_deceleration (float): 最大减速度(m/s²)
+            turning_radius (float): 最小转弯半径(m)
+            length (float): 车辆长度(m)
+            width (float): 车辆宽度(m)
+        """
+        # 实现代码...
+    
+    @property
+    def current_speed(self) -> float:
+        """
+        获取车辆当前速度
+        
+        返回:
+            float: 当前速度(m/s)
+        """
+        # 实现代码...
+    
+    @current_speed.setter
+    def current_speed(self, speed: float) -> None:
+        """
+        设置车辆当前速度
+        
+        参数:
+            speed (float): 速度(m/s，限制为max_speed)
+        """
+        # 实现代码...
+    
+    @property
+    def target_speed(self) -> float:
+        """
+        获取车辆目标速度
+        
+        返回:
+            float: 目标速度(m/s)
+        """
+        # 实现代码...
+    
+    @target_speed.setter
+    def target_speed(self, speed: float) -> None:
+        """
+        设置车辆目标速度
+        
+        参数:
+            speed (float): 目标速度(m/s，限制为max_speed)
+        """
+        # 实现代码...
+    
+    def update_speed(self, dt: float) -> None:
+        """
+        更新车辆速度朝向目标速度
+        
+        参数:
+            dt (float): 时间步长(秒)
+        """
+        # 实现代码...
+    
+    def get_stopping_distance(self) -> float:
+        """
+        计算当前速度下的制动距离
+        
+        返回:
+            float: 制动距离(m)
+        """
+        # 实现代码...
+    
+    def get_turning_distance(self, angle: float) -> float:
+        """
+        计算旋转特定角度所需的距离
+        
+        参数:
+            angle (float): 角度(弧度)
+            
+        返回:
+            float: 距离(m)
+        """
+        # 实现代码...
+    
+    def get_bounding_points(self) -> List[Point2D]:
+        """
+        获取车辆边界框的角点
+        
+        返回:
+            List[Point2D]: 四个角点
+        """
+        # 实现代码...
+    
+    def estimate_arrival_time(self, destination: Point2D) -> float:
+        """
+        估计以最大速度到达目的地的时间
+        
+        参数:
+            destination (Point2D): 目标位置
+            
+        返回:
+            float: 估计时间(秒)
+        """
+        # 实现代码...
+1.1.3 VehicleState (vehicle_state.py)
+描述: 车辆可能状态的枚举类，每个状态代表车辆的一种离散操作模式。
+pythonclass VehicleState(Enum):
+    """
+    车辆状态枚举
+    """
+    
+    IDLE = auto()             # 车辆未分配任何任务
+    PREPARING = auto()        # 车辆正在准备任务(装载等)
+    EN_ROUTE = auto()         # 车辆正在移动到目的地
+    LOADING = auto()          # 车辆正在被装载
+    UNLOADING = auto()        # 车辆正在被卸载
+    WAITING = auto()          # 车辆正在等待(如在交叉路口)
+    EMERGENCY_STOP = auto()   # 车辆因紧急情况停止
+    MAINTENANCE = auto()      # 车辆正在进行维护
+    OUT_OF_SERVICE = auto()   # 车辆停止服务
+    CHARGING = auto()         # 车辆正在充电(电动车辆)
+    FAULT = auto()            # 车辆有故障状态
+    
+    @classmethod
+    def get_valid_transitions(cls, current_state: 'VehicleState') -> Set['VehicleState']:
+        """
+        获取从给定状态可进行的有效状态转换集合
+        
+        参数:
+            current_state (VehicleState): 当前车辆状态
+            
+        返回:
+            Set[VehicleState]: 有效下一状态集合
+        """
+        # 实现代码...
+    
+    @classmethod
+    def can_transition(cls, current_state: 'VehicleState', 
+                    next_state: 'VehicleState') -> bool:
+        """
+        检查从current_state到next_state的转换是否有效
+        
+        参数:
+            current_state (VehicleState): 当前车辆状态
+            next_state (VehicleState): 目标车辆状态
+            
+        返回:
+            bool: 如果转换有效则为True，否则为False
+        """
+        # 实现代码...
+1.1.4 TransportStage (vehicle_state.py)
+描述: 车辆运输阶段的枚举类，代表运输操作的逻辑阶段，独立于车辆的物理状态。
+pythonclass TransportStage(Enum):
+    """
+    车辆运输阶段枚举
+    """
+    
+    NONE = auto()              # 不在运输操作中
+    APPROACHING = auto()       # 接近装载点
+    LOADING = auto()           # 在装载点，正在装载
+    TRANSPORTING = auto()      # 运输货物到目的地
+    UNLOADING = auto()         # 在目的地，正在卸载
+    RETURNING = auto()         # 返回基地/空闲位置
+1.1.5 VehicleStateError (vehicle_state.py)
+描述: 无效状态转换时引发的异常。
+pythonclass VehicleStateError(Exception):
+    """
+    状态转换错误异常
+    """
+    
+    def __init__(self, current_state: VehicleState, target_state: VehicleState):
+        """
+        初始化状态转换错误
+        
+        参数:
+            current_state (VehicleState): 当前车辆状态
+            target_state (VehicleState): 目标车辆状态
+        """
+        # 实现代码...
+1.1.6 VehicleStateManager (vehicle_state.py)
+描述: 管理车辆的状态和状态转换，确保状态转换有效并维护状态历史记录。
+pythonclass VehicleStateManager:
+    """
+    车辆状态管理器
+    """
+    
+    def __init__(self, initial_state: VehicleState = VehicleState.IDLE):
+        """
+        初始化状态管理器
+        
+        参数:
+            initial_state (VehicleState): 初始车辆状态
+        """
+        # 实现代码...
+    
+    @property
+    def current_state(self) -> VehicleState:
+        """
+        获取当前车辆状态
+        
+        返回:
+            VehicleState: 当前状态
+        """
+        # 实现代码...
+    
+    @property
+    def transport_stage(self) -> TransportStage:
+        """
+        获取当前运输阶段
+        
+        返回:
+            TransportStage: 当前运输阶段
+        """
+        # 实现代码...
+    
+    @transport_stage.setter
+    def transport_stage(self, stage: TransportStage) -> None:
+        """
+        设置运输阶段
+        
+        参数:
+            stage (TransportStage): 新运输阶段
+        """
+        # 实现代码...
+    
+    def transition_to(self, target_state: VehicleState, 
+                     force: bool = False) -> bool:
+        """
+        转换到新状态
+        
+        参数:
+            target_state (VehicleState): 目标状态
+            force (bool): 如果为True，允许无效转换
+            
+        返回:
+            bool: 如果转换成功则为True
+            
+        异常:
+            VehicleStateError: 如果转换无效且force=False
+        """
+        # 实现代码...
+    
+    def get_state_history(self) -> List[tuple]:
+        """
+        获取状态转换历史
+        
+        返回:
+            List[tuple]: (状态, 时间戳)元组列表
+        """
+        # 实现代码...
+    
+    def get_time_in_current_state(self) -> float:
+        """
+        获取当前状态持续时间(秒)
+        
+        返回:
+            float: 时间(秒)
+        """
+        # 实现代码...
+    
+    def reset(self, state: VehicleState = VehicleState.IDLE) -> None:
+        """
+        将状态管理器重置为指定状态
+        
+        参数:
+            state (VehicleState): 重置的状态
+        """
+        # 实现代码...
+1.1.7 MiningVehicleError (mining_vehicle.py)
+描述: 矿用车辆错误的基本异常类。
+pythonclass MiningVehicleError(Exception):
+    """
+    矿用车辆错误基类
+    """
+    pass
+1.1.8 TaskAssignmentError (mining_vehicle.py)
+描述: 当任务无法分配给车辆时引发的异常。
+pythonclass TaskAssignmentError(MiningVehicleError):
+    """
+    任务分配错误异常
+    """
+    pass
+1.1.9 MiningVehicle (mining_vehicle.py)
+描述: 专门用于采矿作业的矿用车辆，扩展了ConstrainedVehicle，增加了采矿特定属性。
+pythonclass MiningVehicle(ConstrainedVehicle):
+    """
+    矿用车辆类
+    """
+    
+    def __init__(self, vehicle_id: Optional[str] = None, 
+                 max_speed: float = 5.0,
+                 max_capacity: float = 50000.0,
+                 terrain_capability: float = 0.7,
+                 turning_radius: float = 10.0,
+                 length: float = 5.0,
+                 width: float = 2.0,
+                 vehicle_type: str = "standard",
+                 environment = None):
+        """
+        初始化矿用车辆
+        
+        参数:
+            vehicle_id (Optional[str]): 车辆唯一标识符
+            max_speed (float): 最大速度(m/s)
+            max_capacity (float): 最大载重能力(kg)
+            terrain_capability (float): 地形通过能力(0-1)
+            turning_radius (float): 最小转弯半径(m)
+            length (float): 车辆长度(m)
+            width (float): 车辆宽度(m)
+            vehicle_type (str): 类型标识(standard, heavy等)
+            environment: 操作环境引用
+        """
+        # 实现代码...
+    
+    @property
+    def state(self) -> VehicleState:
+        """
+        获取车辆当前状态
+        
+        返回:
+            VehicleState: 当前状态
+        """
+        # 实现代码...
+    
+    @state.setter
+    def state(self, new_state: VehicleState) -> None:
+        """
+        设置车辆状态
+        
+        参数:
+            new_state (VehicleState): 新车辆状态
+            
+        异常:
+            VehicleStateError: 如果状态转换无效
+        """
+        # 实现代码...
+    
+    @property
+    def transport_stage(self) -> TransportStage:
+        """
+        获取当前运输阶段
+        
+        返回:
+            TransportStage: 当前运输阶段
+        """
+        # 实现代码...
+    
+    @transport_stage.setter
+    def transport_stage(self, stage: TransportStage) -> None:
+        """
+        设置运输阶段
+        
+        参数:
+            stage (TransportStage): 新运输阶段
+        """
+        # 实现代码...
+    
+    @property
+    def load_ratio(self) -> float:
+        """
+        获取当前载重比例(0-1)
+        
+        返回:
+            float: 载重比例
+        """
+        # 实现代码...
+    
+    @property
+    def is_loaded(self) -> bool:
+        """
+        检查车辆是否载有货物
+        
+        返回:
+            bool: 如果车辆载有货物则为True
+        """
+        # 实现代码...
+    
+    @property
+    def is_full(self) -> bool:
+        """
+        检查车辆是否达到满载
+        
+        返回:
+            bool: 如果车辆满载则为True
+        """
+        # 实现代码...
+    
+    @property
+    def is_empty(self) -> bool:
+        """
+        检查车辆是否为空
+        
+        返回:
+            bool: 如果车辆为空则为True
+        """
+        # 实现代码...
+    
+    @property
+    def is_available(self) -> bool:
+        """
+        检查车辆是否可用于新任务
+        
+        返回:
+            bool: 如果车辆可用则为True
+        """
+        # 实现代码...
+    
+    @property
+    def is_operational(self) -> bool:
+        """
+        检查车辆是否运行正常(没有故障或停止服务)
+        
+        返回:
+            bool: 如果车辆运行正常则为True
+        """
+        # 实现代码...
+    
+    def update_position(self, dt: float = 1.0) -> None:
+        """
+        根据其路径和速度更新车辆位置
+        
+        参数:
+            dt (float): 时间步长(秒)
+        """
+        # 实现代码...
+    
+    def assign_task(self, task: Any) -> None:
+        """
+        为车辆分配任务
+        
+        参数:
+            task (Any): 要分配的任务
+            
+        异常:
+            TaskAssignmentError: 如果任务无法分配
+        """
+        # 实现代码...
+    
+    def calculate_path_to(self, destination: Point2D) -> List[Point2D]:
+        """
+        计算从当前位置到目的地的路径
+        
+        参数:
+            destination (Point2D): 目标位置
+            
+        返回:
+            List[Point2D]: 计算出的路径
+        """
+        # 实现代码...
+    
+    def assign_path(self, path: List[Union[Point2D, Tuple[float, float]]]) -> None:
+        """
+        为车辆分配新路径
+        
+        参数:
+            path (List[Union[Point2D, Tuple[float, float]]]): 组成路径的点列表
+        """
+        # 实现代码...
+    
+    def load(self, amount: float) -> float:
+        """
+        将材料装载到车辆上
+        
+        参数:
+            amount (float): 要装载的量(kg)
+            
+        返回:
+            float: 实际装载量
+        """
+        # 实现代码...
+    
+    def unload(self, amount: Optional[float] = None) -> float:
+        """
+        从车辆上卸载材料
+        
+        参数:
+            amount (Optional[float]): 要卸载的量(kg)，如果为None则全部卸载
+            
+        返回:
+            float: 实际卸载量
+        """
+        # 实现代码...
+    
+    def perform_maintenance(self) -> None:
+        """
+        执行维护并重置维护触发器
+        """
+        # 实现代码...
+    
+    def add_fault(self, fault_code: str, description: str = "") -> None:
+        """
+        为车辆添加故障代码
+        
+        参数:
+            fault_code (str): 故障代码标识符
+            description (str): 故障描述
+        """
+        # 实现代码...
+    
+    def clear_fault(self, fault_code: str) -> bool:
+        """
+        清除特定故障代码
+        
+        参数:
+            fault_code (str): 要清除的故障代码
+            
+        返回:
+            bool: 如果故障被清除则为True，如果未找到则为False
+        """
+        # 实现代码...
+    
+    def reset(self) -> None:
+        """
+        将车辆重置为初始状态
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将车辆转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'MiningVehicle':
+        """
+        从字典表示创建车辆
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            MiningVehicle: 新车辆实例
+        """
+        # 实现代码...
+1.1.10 DumpTruck (mining_vehicle.py)
+描述: 用于运输矿石的专用矿用车辆，特点是高容量、中等速度和中等地形能力。
+pythonclass DumpTruck(MiningVehicle):
+    """
+    运矿卡车类
+    """
+    
+    def __init__(self, vehicle_id: Optional[str] = None, environment = None):
+        """
+        初始化运矿卡车
+        
+        参数:
+            vehicle_id (Optional[str]): 车辆唯一标识符
+            environment: 操作环境引用
+        """
+        # 实现代码...
+    
+    def raise_bed(self) -> bool:
+        """
+        提升卡车货箱进行倾卸
+        
+        返回:
+            bool: 如果成功则为True，否则为False
+        """
+        # 实现代码...
+    
+    def lower_bed(self) -> bool:
+        """
+        倾卸后降低卡车货箱
+        
+        返回:
+            bool: 如果成功则为True，否则为False
+        """
+        # 实现代码...
+    
+    def update_position(self, dt: float = 1.0) -> None:
+        """
+        根据负载调整速度
+        
+        参数:
+            dt (float): 时间步长(秒)
+        """
+        # 实现代码...
+1.1.11 Excavator (mining_vehicle.py)
+描述: 用于挖掘和装载的专用矿用车辆，特点是移动性有限、挖掘能力强、可以装载其他车辆。
+pythonclass Excavator(MiningVehicle):
+    """
+    挖掘机类
+    """
+    
+    def __init__(self, vehicle_id: Optional[str] = None, environment = None):
+        """
+        初始化挖掘机
+        
+        参数:
+            vehicle_id (Optional[str]): 车辆唯一标识符
+            environment: 操作环境引用
+        """
+        # 实现代码...
+    
+    def extend_arm(self, position: float) -> None:
+        """
+        伸展挖掘机臂
+        
+        参数:
+            position (float): 臂位置(0-1)
+        """
+        # 实现代码...
+    
+    def dig(self, amount: float) -> float:
+        """
+        将材料挖入铲斗
+        
+        参数:
+            amount (float): 要挖掘的量(kg)
+            
+        返回:
+            float: 实际挖掘量
+        """
+        # 实现代码...
+    
+    def load_vehicle(self, vehicle: MiningVehicle) -> float:
+        """
+        将材料从铲斗装载到另一辆车辆
+        
+        参数:
+            vehicle (MiningVehicle): 要装载的车辆
+            
+        返回:
+            float: 装载量
+        """
+        # 实现代码...
+1.1.12 SupportVehicle (mining_vehicle.py)
+描述: 用于维护和支持操作的专用矿用车辆，特点是高移动性、用于维修的专用设备、燃料和零件运输。
+pythonclass SupportVehicle(MiningVehicle):
+    """
+    支援车辆类
+    """
+    
+    def __init__(self, vehicle_id: Optional[str] = None, environment = None):
+        """
+        初始化支援车辆
+        
+        参数:
+            vehicle_id (Optional[str]): 车辆唯一标识符
+            environment: 操作环境引用
+        """
+        # 实现代码...
+    
+    def repair_vehicle(self, vehicle: MiningVehicle) -> List[str]:
+        """
+        对另一辆车辆进行维修
+        
+        参数:
+            vehicle (MiningVehicle): 要维修的车辆
+            
+        返回:
+            List[str]: 修复的故障列表
+        """
+        # 实现代码...
+    
+    def refuel_vehicle(self, vehicle: MiningVehicle, amount: float) -> float:
+        """
+        为另一辆车辆加油
+        
+        参数:
+            vehicle (MiningVehicle): 要加油的车辆
+            amount (float): 要转移的燃油量
+            
+        返回:
+            float: 实际转移量
+        """
+        # 实现代码...
+
+### 1.2 tasks 模块
+
+1.2.1 TaskStatus (base.py)
+描述: 任务状态常量类。
+pythonclass TaskStatus:
+    """
+    任务状态常量
+    """
+    PENDING = "pending"       # 任务等待分配
+    ASSIGNED = "assigned"     # 任务已分配但未开始
+    IN_PROGRESS = "in_progress"  # 任务正在进行中
+    COMPLETED = "completed"   # 任务成功完成
+    FAILED = "failed"         # 任务失败
+    CANCELED = "canceled"     # 任务被取消
+1.2.2 TaskError (base.py)
+描述: 任务相关错误的基础异常类。
+pythonclass TaskError(Exception):
+    """
+    任务错误基类
+    """
+    pass
+1.2.3 TaskStateError (base.py)
+描述: 无效任务状态转换时引发的异常。
+pythonclass TaskStateError(TaskError):
+    """
+    任务状态转换错误异常
+    """
+    pass
+1.2.4 TaskAssignmentError (base.py)
+描述: 任务分配过程中出现错误时引发的异常。
+pythonclass TaskAssignmentError(TaskError):
+    """
+    任务分配错误异常
+    """
+    pass
+1.2.5 Task (base.py)
+描述: 所有任务类型的抽象基类，定义了所有任务必须实现的通用接口和行为。
+pythonclass Task(ABC, Serializable):
+    """
+    任务抽象基类
+    """
+    
+    # 有效状态转换
+    STATE_TRANSITIONS = {
+        TaskStatus.PENDING: {TaskStatus.ASSIGNED, TaskStatus.CANCELED},
+        TaskStatus.ASSIGNED: {TaskStatus.IN_PROGRESS, TaskStatus.CANCELED},
+        TaskStatus.IN_PROGRESS: {TaskStatus.COMPLETED, TaskStatus.FAILED},
+        TaskStatus.COMPLETED: set(),  # 终止状态
+        TaskStatus.FAILED: {TaskStatus.PENDING},  # 可重试
+        TaskStatus.CANCELED: {TaskStatus.PENDING}  # 可重新排队
+    }
+    
+    def __init__(self, task_id: Optional[str] = None, 
+                priority: int = 1,
+                deadline: Optional[datetime] = None):
+        """
+        初始化任务
+        
+        参数:
+            task_id (Optional[str]): 任务唯一标识符(如未提供则自动生成)
+            priority (int): 任务优先级(更高的数字=更高的优先级)
+            deadline (Optional[datetime]): 任务截止时间
+        """
+        # 实现代码...
+    
+    @property
+    def status(self) -> str:
+        """
+        获取任务的当前状态
+        
+        返回:
+            str: 当前状态
+        """
+        # 实现代码...
+    
+    @status.setter
+    def status(self, new_status: str) -> None:
+        """
+        设置任务状态
+        
+        参数:
+            new_status (str): 新状态
+            
+        异常:
+            TaskStateError: 如果转换无效
+        """
+        # 实现代码...
+    
+    def _set_status(self, new_status: str, force: bool = False) -> None:
+        """
+        内部方法，设置状态并进行转换验证
+        
+        参数:
+            new_status (str): 新状态
+            force (bool): 如果为True，跳过转换验证
+            
+        异常:
+            TaskStateError: 如果转换无效且force=False
+        """
+        # 实现代码...
+    
+    @property
+    def is_active(self) -> bool:
+        """
+        检查任务是否处于活动状态(已分配或正在进行)
+        
+        返回:
+            bool: 如果任务处于活动状态则为True
+        """
+        # 实现代码...
+    
+    @property
+    def is_completed(self) -> bool:
+        """
+        检查任务是否已完成
+        
+        返回:
+            bool: 如果任务已完成则为True
+        """
+        # 实现代码...
+    
+    @property
+    def is_pending(self) -> bool:
+        """
+        检查任务是否等待分配
+        
+        返回:
+            bool: 如果任务等待分配则为True
+        """
+        # 实现代码...
+    
+    @property
+    def execution_time(self) -> Optional[float]:
+        """
+        获取任务执行时间(秒)
+        
+        返回:
+            Optional[float]: 执行时间，如果未开始则为None
+        """
+        # 实现代码...
+    
+    @property
+    def wait_time(self) -> float:
+        """
+        获取任务等待时间(秒)
+        
+        返回:
+            float: 等待时间
+        """
+        # 实现代码...
+    
+    @property
+    def is_overdue(self) -> bool:
+        """
+        检查任务是否已超过截止时间
+        
+        返回:
+            bool: 如果任务超过截止时间则为True
+        """
+        # 实现代码...
+    
+    @property
+    def time_to_deadline(self) -> Optional[float]:
+        """
+        获取截止时间前剩余时间(秒)
+        
+        返回:
+            Optional[float]: 截止时间前的时间，如果没有截止时间则为None
+        """
+        # 实现代码...
+    
+    @property
+    def urgency(self) -> float:
+        """
+        计算任务紧急程度(0-1)
+        
+        考虑优先级和截止时间
+        
+        返回:
+            float: 紧急程度得分
+        """
+        # 实现代码...
+    
+    def assign(self, assignee_id: str) -> None:
+        """
+        将任务分配给实体
+        
+        参数:
+            assignee_id (str): 要分配任务的实体ID
+            
+        异常:
+            TaskStateError: 如果任务不处于可分配状态
+        """
+        # 实现代码...
+    
+    def start(self) -> None:
+        """
+        开始任务执行
+        
+        异常:
+            TaskStateError: 如果任务不处于可启动状态
+        """
+        # 实现代码...
+    
+    def complete(self) -> None:
+        """
+        将任务标记为已完成
+        
+        异常:
+            TaskStateError: 如果任务不处于可完成状态
+        """
+        # 实现代码...
+    
+    def fail(self, reason: str = "") -> None:
+        """
+        将任务标记为失败
+        
+        参数:
+            reason (str): 失败原因
+            
+        异常:
+            TaskStateError: 如果任务不处于可失败状态
+        """
+        # 实现代码...
+    
+    def cancel(self) -> None:
+        """
+        取消任务
+        
+        异常:
+            TaskStateError: 如果任务处于终止状态
+        """
+        # 实现代码...
+    
+    def reset(self) -> None:
+        """
+        将任务重置为等待状态
+        
+        用于重试失败任务
+        
+        异常:
+            TaskStateError: 如果任务不处于FAILED或CANCELED状态
+        """
+        # 实现代码...
+    
+    def update_progress(self, progress: float) -> None:
+        """
+        更新任务进度
+        
+        参数:
+            progress (float): 进度值(0-1)
+        """
+        # 实现代码...
+    
+    def get_duration_estimate(self) -> float:
+        """
+        获取任务持续时间估计(秒)
+        
+        返回:
+            float: 估计持续时间
+        """
+        # 实现代码...
+    
+    def get_status_history(self) -> List[Tuple[str, datetime]]:
+        """
+        获取状态变更历史
+        
+        返回:
+            List[Tuple[str, datetime]]: (状态, 时间戳)元组列表
+        """
+        # 实现代码...
+    
+    @abstractmethod
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将任务转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Task':
+        """
+        从字典表示创建任务
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            Task: 新任务实例
+        """
+        pass
+1.2.6 TaskAssignment (base.py)
+描述: 表示任务分配给实体的关系，用于跟踪任务分配及其性能指标。
+pythonclass TaskAssignment:
+    """
+    任务分配类
+    """
+    
+    def __init__(self, task: Task, assignee_id: str, 
+                estimated_duration: Optional[float] = None):
+        """
+        初始化任务分配
+        
+        参数:
+            task (Task): 被分配的任务
+            assignee_id (str): 被分配任务的实体ID
+            estimated_duration (Optional[float]): 估计持续时间(秒)
+        """
+        # 实现代码...
+    
+    def start(self) -> None:
+        """
+        开始执行分配的任务
+        """
+        # 实现代码...
+    
+    def complete(self) -> None:
+        """
+        将分配的任务标记为已完成
+        """
+        # 实现代码...
+    
+    def fail(self, reason: str = "") -> None:
+        """
+        将分配的任务标记为失败
+        
+        参数:
+            reason (str): 失败原因
+        """
+        # 实现代码...
+    
+    def cancel(self) -> None:
+        """
+        取消分配的任务
+        """
+        # 实现代码...
+    
+    @property
+    def is_active(self) -> bool:
+        """
+        检查分配是否处于活动状态
+        
+        返回:
+            bool: 如果分配处于活动状态则为True
+        """
+        # 实现代码...
+    
+    @property
+    def is_completed(self) -> bool:
+        """
+        检查分配是否已完成
+        
+        返回:
+            bool: 如果分配已完成则为True
+        """
+        # 实现代码...
+    
+    @property
+    def duration_performance(self) -> Optional[float]:
+        """
+        计算持续时间性能比率
+        
+        返回实际与估计持续时间的比率(< 1表示比估计快)
+        
+        返回:
+            Optional[float]: 性能比率，如果未完成则为None
+        """
+        # 实现代码...
+    
+    def update_progress(self, progress: float) -> None:
+        """
+        更新分配任务的进度
+        
+        参数:
+            progress (float): 进度值(0-1)
+        """
+        # 实现代码...
+1.2.7 TaskStatus (task_status.py)
+描述: 任务可能状态的枚举类，每个状态代表任务生命周期中的一个离散状态。
+pythonclass TaskStatus(Enum):
+    """
+    任务状态枚举
+    """
+    
+    PENDING = auto()      # 任务等待分配
+    ASSIGNED = auto()     # 任务已分配但未开始
+    IN_PROGRESS = auto()  # 任务正在进行中
+    COMPLETED = auto()    # 任务成功完成
+    FAILED = auto()       # 任务失败
+    CANCELED = auto()     # 任务被取消
+    BLOCKED = auto()      # 任务被依赖项或约束阻塞
+    PAUSED = auto()       # 任务被暂停
+
+    @classmethod
+    def get_valid_transitions(cls, current_status: 'TaskStatus') -> Set['TaskStatus']:
+        """
+        获取从给定状态可进行的有效状态转换集合
+        
+        参数:
+            current_status (TaskStatus): 当前任务状态
+            
+        返回:
+            Set[TaskStatus]: 有效下一状态集合
+        """
+        # 实现代码...
+    
+    @classmethod
+    def can_transition(cls, current_status: 'TaskStatus', 
+                      next_status: 'TaskStatus') -> bool:
+        """
+        检查从current_status到next_status的转换是否有效
+        
+        参数:
+            current_status (TaskStatus): 当前任务状态
+            next_status (TaskStatus): 目标任务状态
+            
+        返回:
+            bool: 如果转换有效则为True，否则为False
+        """
+        # 实现代码...
+
+    @classmethod
+    def is_terminal(cls, status: 'TaskStatus') -> bool:
+        """
+        检查状态是否为终止状态(没有出站转换)
+        
+        参数:
+            status (TaskStatus): 要检查的任务状态
+            
+        返回:
+            bool: 如果状态为终止状态则为True，否则为False
+        """
+        # 实现代码...
+    
+    @classmethod
+    def is_active(cls, status: 'TaskStatus') -> bool:
+        """
+        检查状态是否表示活动任务
+        
+        参数:
+            status (TaskStatus): 要检查的任务状态
+            
+        返回:
+            bool: 如果状态为活动状态则为True，否则为False
+        """
+        # 实现代码...
+1.2.8 TaskPriority (task_status.py)
+描述: 任务优先级级别的枚举类，值越高表示优先级越高。
+pythonclass TaskPriority(Enum):
+    """
+    任务优先级枚举
+    """
+    
+    LOW = 1
+    NORMAL = 3
+    HIGH = 5
+    URGENT = 8
+    CRITICAL = 10
+1.2.9 TaskType (task_status.py)
+描述: 采矿系统中任务类型的枚举类，每种类型代表不同种类的采矿操作。
+pythonclass TaskType(Enum):
+    """
+    采矿系统中任务类型的枚举
+    """
+    
+    TRANSPORT = auto()    # 将材料从一个位置移动到另一个位置
+    LOADING = auto()      # 将材料装载到车辆上
+    UNLOADING = auto()    # 从车辆上卸载材料
+    EXCAVATION = auto()   # 从地面挖掘材料
+    DRILLING = auto()     # 进行爆破或取样钻探
+    MAINTENANCE = auto()  # 车辆或设备维护
+    REFUELING = auto()    # 车辆加油
+    INSPECTION = auto()   # 检查设备或区域
+    SURVEYING = auto()    # 测量区域
+    CLEANUP = auto()      # 清理区域
+1.2.10 TaskStatusTransitionError (task_status.py)
+描述: 无效任务状态转换时引发的异常。
+pythonclass TaskStatusTransitionError(Exception):
+    """
+    任务状态转换错误异常
+    """
+    
+    def __init__(self, current_status: TaskStatus, target_status: TaskStatus):
+        """
+        初始化状态转换错误
+        
+        参数:
+            current_status (TaskStatus): 当前任务状态
+            target_status (TaskStatus): 目标任务状态
+        """
+        # 实现代码...
+1.2.11 TaskStatusManager (task_status.py)
+描述: 管理任务的状态和状态转换，确保状态转换有效并维护状态历史记录。
+pythonclass TaskStatusManager:
+    """
+    任务状态管理器
+    """
+    
+    def __init__(self, initial_status: TaskStatus = TaskStatus.PENDING):
+        """
+        初始化状态管理器
+        
+        参数:
+            initial_status (TaskStatus): 初始任务状态
+        """
+        # 实现代码...
+    
+    @property
+    def current_status(self) -> TaskStatus:
+        """
+        获取当前任务状态
+        
+        返回:
+            TaskStatus: 当前状态
+        """
+        # 实现代码...
+    
+    def transition_to(self, target_status: TaskStatus, 
+                     force: bool = False) -> bool:
+        """
+        转换到新状态
+        
+        参数:
+            target_status (TaskStatus): 目标状态
+            force (bool): 如果为True，允许无效转换
+            
+        返回:
+            bool: 如果转换成功则为True
+            
+        异常:
+            TaskStatusTransitionError: 如果转换无效且force=False
+        """
+        # 实现代码...
+    
+    def get_status_history(self) -> List[tuple]:
+        """
+        获取状态转换历史
+        
+        返回:
+            List[tuple]: (状态, 时间戳)元组列表
+        """
+        # 实现代码...
+    
+    def get_time_in_current_status(self) -> float:
+        """
+        获取当前状态持续时间(秒)
+        
+        返回:
+            float: 时间(秒)
+        """
+        # 实现代码...
+    
+    def reset(self, status: TaskStatus = TaskStatus.PENDING) -> None:
+        """
+        将状态管理器重置为指定状态
+        
+        参数:
+            status (TaskStatus): 重置的状态
+        """
+        # 实现代码...
+1.2.12 TransportTaskError (transport_task.py)
+描述: 运输任务特定错误引发的异常。
+pythonclass TransportTaskError(TaskError):
+    """
+    运输任务错误异常
+    """
+    pass
+1.2.13 TransportTask (transport_task.py)
+描述: 将材料从一个位置运输到另一个位置的任务，表示完整的运输操作，包括装载、运输和卸载阶段。
+pythonclass TransportTask(Task):
+    """
+    运输任务类
+    """
+    
+    def __init__(self, 
+                start_point: Union[Point2D, Tuple[float, float]],
+                end_point: Union[Point2D, Tuple[float, float]],
+                task_id: Optional[str] = None,
+                task_type: str = "transport",
+                material_type: str = "ore",
+                amount: float = 50000.0,
+                priority: Union[int, TaskPriority] = TaskPriority.NORMAL,
+                deadline: Optional[datetime] = None):
+        """
+        初始化运输任务
+        
+        参数:
+            start_point (Union[Point2D, Tuple[float, float]]): 起始位置
+            end_point (Union[Point2D, Tuple[float, float]]): 目的地位置
+            task_id (Optional[str]): 任务唯一标识符
+            task_type (str): 运输任务类型
+            material_type (str): 要运输的材料类型
+            amount (float): 材料数量(kg)
+            priority (Union[int, TaskPriority]): 任务优先级
+            deadline (Optional[datetime]): 任务截止时间
+        """
+        # 实现代码...
+    
+    def _to_point2d(self, point: Union[Point2D, Tuple[float, float]]) -> Point2D:
+        """
+        将点转换为Point2D
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要转换的点
+            
+        返回:
+            Point2D: 转换后的点
+            
+        异常:
+            ValueError: 如果点格式无效
+        """
+        # 实现代码...
+    
+    def _calculate_distance(self) -> float:
+        """
+        计算起点和终点之间的直线距离
+        
+        返回:
+            float: 距离(m)
+        """
+        # 实现代码...
+    
+    def _estimate_load_time(self) -> float:
+        """
+        估计装载所需时间
+        
+        返回:
+            float: 估计时间(秒)
+        """
+        # 实现代码...
+    
+    def _estimate_transport_time(self) -> float:
+        """
+        估计运输所需时间
+        
+        返回:
+            float: 估计时间(秒)
+        """
+        # 实现代码...
+    
+    def _estimate_unload_time(self) -> float:
+        """
+        估计卸载所需时间
+        
+        返回:
+            float: 估计时间(秒)
+        """
+        # 实现代码...
+    
+    def get_duration_estimate(self) -> float:
+        """
+        获取任务总持续时间的估计
+        
+        返回:
+            float: 估计持续时间(秒)
+        """
+        # 实现代码...
+    
+    def set_path(self, path: List[Union[Point2D, Tuple[float, float]]]) -> None:
+        """
+        设置运输路径
+        
+        参数:
+            path (List[Union[Point2D, Tuple[float, float]]]): 路径点列表
+        """
+        # 实现代码...
+    
+    def add_waypoint(self, waypoint: Union[Point2D, Tuple[float, float]]) -> None:
+        """
+        向任务添加航点
+        
+        参数:
+            waypoint (Union[Point2D, Tuple[float, float]]): 航点位置
+        """
+        # 实现代码...
+    
+    def update_location(self, location: Union[Point2D, Tuple[float, float]]) -> None:
+        """
+        在执行过程中更新当前位置
+        
+        参数:
+            location (Union[Point2D, Tuple[float, float]]): 当前位置
+        """
+        # 实现代码...
+    
+    def _update_transport_progress(self) -> None:
+        """
+        根据当前位置和路径更新进度
+        """
+        # 实现代码...
+    
+    def start_phase(self, phase: str) -> None:
+        """
+        开始运输任务的特定阶段
+        
+        参数:
+            phase (str): 阶段名称(preparation, loading, transport, unloading)
+            
+        异常:
+            TransportTaskError: 如果阶段转换无效
+        """
+        # 实现代码...
+    
+    def update_phase_progress(self, progress: float) -> None:
+        """
+        更新当前阶段的进度
+        
+        参数:
+            progress (float): 进度值(0-1)
+        """
+        # 实现代码...
+    
+    def _update_task_progress(self) -> None:
+        """
+        根据阶段进度更新整体任务进度
+        """
+        # 实现代码...
+    
+    def _complete_current_phase(self) -> None:
+        """
+        处理当前阶段的完成
+        """
+        # 实现代码...
+    
+    def update_amount(self, remaining: float) -> None:
+        """
+        更新剩余材料数量
+        
+        参数:
+            remaining (float): 剩余数量(kg)
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将运输任务转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'TransportTask':
+        """
+        从字典表示创建运输任务
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            TransportTask: 新运输任务实例
+            
+        异常:
+            ValueError: 如果缺少必需数据
+        """
+        # 实现代码...
+1.2.14 LoadingTask (transport_task.py)
+描述: 在源位置装载材料的专用任务，专注于运输操作的装载阶段。
+pythonclass LoadingTask(TransportTask):
+    """
+    装载任务类
+    """
+    
+    def __init__(self,
+                loading_point: Union[Point2D, Tuple[float, float]],
+                task_id: Optional[str] = None,
+                material_type: str = "ore",
+                amount: float = 50000.0,
+                priority: Union[int, TaskPriority] = TaskPriority.NORMAL,
+                deadline: Optional[datetime] = None):
+        """
+        初始化装载任务
+        
+        参数:
+            loading_point (Union[Point2D, Tuple[float, float]]): 装载位置
+            task_id (Optional[str]): 任务唯一标识符
+            material_type (str): 要装载的材料类型
+            amount (float): 材料数量(kg)
+            priority (Union[int, TaskPriority]): 任务优先级
+            deadline (Optional[datetime]): 任务截止时间
+        """
+        # 实现代码...
+    
+    def get_duration_estimate(self) -> float:
+        """
+        获取装载任务持续时间的估计
+        
+        返回:
+            float: 估计持续时间(秒)
+        """
+        # 实现代码...
+    
+    def update_loading_rate(self, rate: float) -> None:
+        """
+        更新装载速率
+        
+        参数:
+            rate (float): 新装载速率(kg/s)
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将装载任务转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'LoadingTask':
+        """
+        从字典表示创建装载任务
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            LoadingTask: 新装载任务实例
+            
+        异常:
+            ValueError: 如果缺少必需数据
+        """
+        # 实现代码...
+1.2.15 UnloadingTask (transport_task.py)
+描述: 在目的地卸载材料的专用任务，专注于运输操作的卸载阶段。
+pythonclass UnloadingTask(TransportTask):
+    """
+    卸载任务类
+    """
+    
+    def __init__(self, 
+                unloading_point: Union[Point2D, Tuple[float, float]],
+                task_id: Optional[str] = None,
+                material_type: str = "ore",
+                amount: float = 50000.0,
+                priority: Union[int, TaskPriority] = TaskPriority.NORMAL,
+                deadline: Optional[datetime] = None):
+        """
+        初始化卸载任务
+        
+        参数:
+            unloading_point (Union[Point2D, Tuple[float, float]]): 卸载位置
+            task_id (Optional[str]): 任务唯一标识符
+            material_type (str): 要卸载的材料类型
+            amount (float): 材料数量(kg)
+            priority (Union[int, TaskPriority]): 任务优先级
+            deadline (Optional[datetime]): 任务截止时间
+        """
+        # 实现代码...
+    
+    def get_duration_estimate(self) -> float:
+        """
+        获取卸载任务持续时间的估计
+        
+        返回:
+            float: 估计持续时间(秒)
+        """
+        # 实现代码...
+    
+    def update_unloading_rate(self, rate: float) -> None:
+        """
+        更新卸载速率
+        
+        参数:
+            rate (float): 新卸载速率(kg/s)
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将卸载任务转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'UnloadingTask':
+        """
+        从字典表示创建卸载任务
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            UnloadingTask: 新卸载任务实例
+            
+        异常:
+            ValueError: 如果缺少必需数据
+        """
+        # 实现代码...
+
+1.3.1 EnvironmentError (base.py)
+描述: 环境相关错误的基础异常类。
+pythonclass EnvironmentError(Exception):
+    """
+    环境错误基类
+    """
+    pass
+1.3.2 Environment (base.py)
+描述: 所有环境类型的抽象基类，定义了所有环境必须实现的通用接口和行为。环境代表车辆运行的物理空间。
+pythonclass Environment(ABC, Serializable):
+    """
+    抽象环境基类
+    """
+    
+    def __init__(self, name: str, 
+                bounds: Union[BoundingBox, Tuple[float, float, float, float]],
+                resolution: float = 1.0):
+        """
+        初始化环境
+        
+        参数:
+            name (str): 环境名称
+            bounds (Union[BoundingBox, Tuple[float, float, float, float]]): 环境边界框(BoundingBox或(min_x, min_y, max_x, max_y))
+            resolution (float): 环境网格分辨率(米)
+        
+        异常:
+            ValueError: 如果边界格式无效
+        """
+        # 实现代码...
+    
+    @property
+    def width(self) -> float:
+        """
+        获取环境宽度
+        
+        返回:
+            float: 宽度
+        """
+        # 实现代码...
+    
+    @property
+    def height(self) -> float:
+        """
+        获取环境高度
+        
+        返回:
+            float: 高度
+        """
+        # 实现代码...
+    
+    @property
+    def center(self) -> Point2D:
+        """
+        获取环境中心点
+        
+        返回:
+            Point2D: 中心点
+        """
+        # 实现代码...
+    
+    @property
+    def obstacles(self) -> Set[Point2D]:
+        """
+        获取障碍点集合
+        
+        返回:
+            Set[Point2D]: 障碍点集合
+        """
+        # 实现代码...
+    
+    @property
+    def key_locations(self) -> Dict[str, Point2D]:
+        """
+        获取关键位置字典
+        
+        返回:
+            Dict[str, Point2D]: 关键位置字典
+        """
+        # 实现代码...
+    
+    def add_obstacle(self, point: Union[Point2D, Tuple[float, float]]) -> None:
+        """
+        向环境添加障碍物
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 障碍点
+        
+        异常:
+            ValueError: 如果点格式无效
+        """
+        # 实现代码...
+    
+    def add_obstacles(self, points: List[Union[Point2D, Tuple[float, float]]]) -> None:
+        """
+        向环境添加多个障碍物
+        
+        参数:
+            points (List[Union[Point2D, Tuple[float, float]]]): 障碍点列表
+        """
+        # 实现代码...
+    
+    def remove_obstacle(self, point: Union[Point2D, Tuple[float, float]]) -> bool:
+        """
+        从环境中移除障碍物
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 障碍点
+            
+        返回:
+            bool: 如果障碍物被移除则为True，如果未找到则为False
+        
+        异常:
+            ValueError: 如果点格式无效
+        """
+        # 实现代码...
+    
+    def clear_obstacles(self) -> None:
+        """
+        清除环境中的所有障碍物
+        """
+        # 实现代码...
+    
+    def add_key_location(self, name: str, point: Union[Point2D, Tuple[float, float]]) -> None:
+        """
+        向环境添加关键位置
+        
+        参数:
+            name (str): 位置名称
+            point (Union[Point2D, Tuple[float, float]]): 位置点
+        
+        异常:
+            ValueError: 如果点格式无效
+        """
+        # 实现代码...
+    
+    def remove_key_location(self, name: str) -> bool:
+        """
+        从环境中移除关键位置
+        
+        参数:
+            name (str): 位置名称
+            
+        返回:
+            bool: 如果位置被移除则为True，如果未找到则为False
+        """
+        # 实现代码...
+    
+    def get_key_location(self, name: str) -> Optional[Point2D]:
+        """
+        通过名称获取关键位置
+        
+        参数:
+            name (str): 位置名称
+            
+        返回:
+            Optional[Point2D]: 位置点，如果未找到则为None
+        """
+        # 实现代码...
+    
+    @abstractmethod
+    def is_obstacle(self, point: Union[Point2D, Tuple[float, float]]) -> bool:
+        """
+        检查点是否为障碍物
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要检查的点
+            
+        返回:
+            bool: 如果点是障碍物则为True，否则为False
+        """
+        pass
+    
+    @abstractmethod
+    def is_traversable(self, point: Union[Point2D, Tuple[float, float]], 
+                     vehicle=None) -> bool:
+        """
+        检查点是否可被车辆通过
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要检查的点
+            vehicle: 要检查通行性的车辆
+            
+        返回:
+            bool: 如果点可通行则为True，否则为False
+        """
+        pass
+    
+    @abstractmethod
+    def find_path(self, start: Union[Point2D, Tuple[float, float]],
+                end: Union[Point2D, Tuple[float, float]],
+                vehicle=None) -> List[Point2D]:
+        """
+        查找从起点到终点的路径
+        
+        参数:
+            start (Union[Point2D, Tuple[float, float]]): 起点
+            end (Union[Point2D, Tuple[float, float]]): 终点
+            vehicle: 要查找路径的车辆
+            
+        返回:
+            List[Point2D]: 从起点到终点的路径
+        """
+        pass
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将环境转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+1.3.3 GridEnvironment (base.py)
+描述: 表示为网格单元格的环境，每个单元格可以是可通行的或不可通行的。
+pythonclass GridEnvironment(Environment):
+    """
+    网格环境类
+    """
+    
+    def __init__(self, name: str, 
+                bounds: Union[BoundingBox, Tuple[float, float, float, float]],
+                resolution: float = 1.0):
+        """
+        初始化网格环境
+        
+        参数:
+            name (str): 环境名称
+            bounds (Union[BoundingBox, Tuple[float, float, float, float]]): 环境边界框
+            resolution (float): 网格分辨率(米)
+        """
+        # 实现代码...
+    
+    def _point_to_grid(self, point: Union[Point2D, Tuple[float, float]]) -> Tuple[int, int]:
+        """
+        将点转换为网格坐标
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 世界坐标中的点
+            
+        返回:
+            Tuple[int, int]: 网格坐标(x, y)
+            
+        异常:
+            ValueError: 如果点超出网格边界
+        """
+        # 实现代码...
+    
+    def _grid_to_point(self, grid_x: int, grid_y: int) -> Point2D:
+        """
+        将网格坐标转换为点
+        
+        参数:
+            grid_x (int): 网格x坐标
+            grid_y (int): 网格y坐标
+            
+        返回:
+            Point2D: 世界坐标中的点
+            
+        异常:
+            ValueError: 如果网格坐标超出网格边界
+        """
+        # 实现代码...
+    
+    def add_obstacle(self, point: Union[Point2D, Tuple[float, float]]) -> None:
+        """
+        向网格添加障碍物
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 障碍点
+            
+        异常:
+            ValueError: 如果点超出网格边界
+        """
+        # 实现代码...
+    
+    def remove_obstacle(self, point: Union[Point2D, Tuple[float, float]]) -> bool:
+        """
+        从网格中移除障碍物
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 障碍点
+            
+        返回:
+            bool: 如果障碍物被移除则为True，如果未找到则为False
+            
+        异常:
+            ValueError: 如果点超出网格边界
+        """
+        # 实现代码...
+    
+    def clear_obstacles(self) -> None:
+        """
+        清除网格中的所有障碍物
+        """
+        # 实现代码...
+    
+    def set_terrain_property(self, point: Union[Point2D, Tuple[float, float]], 
+                          hardness: float) -> None:
+        """
+        设置点的地形属性
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要设置属性的点
+            hardness (float): 地形硬度(0-1，其中1为坚固)
+            
+        异常:
+            ValueError: 如果点超出网格边界
+        """
+        # 实现代码...
+    
+    def get_terrain_property(self, point: Union[Point2D, Tuple[float, float]]) -> float:
+        """
+        获取点的地形属性
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要获取属性的点
+            
+        返回:
+            float: 地形硬度
+            
+        异常:
+            ValueError: 如果点超出网格边界
+        """
+        # 实现代码...
+    
+    def is_obstacle(self, point: Union[Point2D, Tuple[float, float]]) -> bool:
+        """
+        检查点是否为障碍物
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要检查的点
+            
+        返回:
+            bool: 如果点是障碍物则为True，否则为False
+        """
+        # 实现代码...
+    
+    def is_traversable(self, point: Union[Point2D, Tuple[float, float]], 
+                     vehicle=None) -> bool:
+        """
+        检查点是否可被车辆通过
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要检查的点
+            vehicle: 要检查通行性的车辆
+            
+        返回:
+            bool: 如果点可通行则为True，否则为False
+        """
+        # 实现代码...
+    
+    def find_path(self, start: Union[Point2D, Tuple[float, float]],
+                end: Union[Point2D, Tuple[float, float]],
+                vehicle=None) -> List[Point2D]:
+        """
+        使用A*算法查找从起点到终点的路径
+        
+        参数:
+            start (Union[Point2D, Tuple[float, float]]): 起点
+            end (Union[Point2D, Tuple[float, float]]): 终点
+            vehicle: 要查找路径的车辆
+            
+        返回:
+            List[Point2D]: 从起点到终点的路径
+            
+        异常:
+            EnvironmentError: 如果找不到路径
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将网格环境转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'GridEnvironment':
+        """
+        从字典表示创建网格环境
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            GridEnvironment: 新网格环境实例
+        """
+        # 实现代码...
+1.3.4 ZoneType (mining_environment.py)
+描述: 采矿环境中操作区域的类型枚举。
+pythonclass ZoneType(Enum):
+    """
+    采矿环境中操作区域的类型枚举
+    """
+    
+    LOADING = auto()      # 材料装载区域
+    UNLOADING = auto()    # 材料卸载区域
+    PARKING = auto()      # 车辆停放/存放区域
+    CHARGING = auto()     # 电动车辆充电区域
+    MAINTENANCE = auto()  # 车辆维护区域
+    EXCAVATION = auto()   # 活动挖掘区域
+    DRILLING = auto()     # 钻孔作业区域
+    BLASTING = auto()     # 准备爆破的区域
+    RESTRICTED = auto()   # 限制进入区域
+    TRANSIT = auto()      # 高流量过境走廊
+1.3.5 TerrainType (mining_environment.py)
+描述: 采矿环境中地形类型的枚举。
+pythonclass TerrainType(Enum):
+    """
+    采矿环境中地形类型的枚举
+    """
+    
+    SOLID_ROCK = auto()    # 坚固的、未破碎的岩石
+    LOOSE_ROCK = auto()    # 破碎的、松散的岩石
+    GRAVEL = auto()        # 砾石和小石块
+    DIRT = auto()          # 泥土
+    CLAY = auto()          # 黏土或泥浆
+    SAND = auto()          # 沙质地形
+    WATER = auto()         # 水覆盖区域(水坑、池塘)
+    ORE_BODY = auto()      # 矿石矿床
+    WASTE = auto()         # 矿山废料
+    ROAD = auto()          # 建造的道路表面
+1.3.6 MiningZone (mining_environment.py)
+描述: 表示采矿环境中的操作区域，区域是具有特定操作目的的多边形区域。
+pythonclass MiningZone:
+    """
+    采矿区域类
+    """
+    
+    def __init__(self, zone_id: str, zone_type: ZoneType, 
+                vertices: List[Point2D], properties: Dict[str, Any] = None):
+        """
+        初始化采矿区域
+        
+        参数:
+            zone_id (str): 区域唯一标识符
+            zone_type (ZoneType): 区域类型
+            vertices (List[Point2D]): 区域多边形顶点
+            properties (Dict[str, Any]): 附加区域属性
+        """
+        # 实现代码...
+    
+    def contains_point(self, point: Point2D) -> bool:
+        """
+        检查点是否在区域内
+        
+        参数:
+            point (Point2D): 要检查的点
+            
+        返回:
+            bool: 如果点在区域内则为True
+        """
+        # 实现代码...
+    
+    def distance_to_point(self, point: Point2D) -> float:
+        """
+        计算点到区域边界的距离
+        
+        参数:
+            point (Point2D): 要测量的点
+            
+        返回:
+            float: 到区域的距离(如果在内部则为0)
+        """
+        # 实现代码...
+1.3.7 OreMaterial (mining_environment.py)
+描述: 表示矿石材料，包含品位、密度和硬度等属性。
+pythonclass OreMaterial:
+    """
+    矿石材料类
+    """
+    
+    def __init__(self, material_id: str, name: str, 
+                grade: float = 0.0, density: float = 0.0, hardness: float = 0.0):
+        """
+        初始化矿石材料
+        
+        参数:
+            material_id (str): 材料唯一标识符
+            name (str): 描述性名称
+            grade (float): 矿石品位(百分比)
+            density (float): 材料密度(公吨/立方米)
+            hardness (float): 材料硬度(0-10刻度)
+        """
+        # 实现代码...
+1.3.8 MiningEnvironment (mining_environment.py)
+描述: 露天采矿作业的专用环境，具有地形硬度、品位和采矿特定操作区域等特性。
+pythonclass MiningEnvironment(GridEnvironment):
+    """
+    采矿环境类
+    """
+    
+    def __init__(self, name: str, 
+                bounds: Union[BoundingBox, Tuple[float, float, float, float]],
+                resolution: float = 1.0,
+                config: Optional[Dict[str, Any]] = None):
+        """
+        初始化采矿环境
+        
+        参数:
+            name (str): 环境名称
+            bounds (Union[BoundingBox, Tuple[float, float, float, float]]): 环境边界框
+            resolution (float): 网格分辨率(米)
+            config (Optional[Dict[str, Any]]): 可选配置字典
+        """
+        # 实现代码...
+    
+    def _init_terrain_grids(self) -> None:
+        """
+        使用默认值初始化地形属性网格
+        """
+        # 实现代码...
+    
+    def _create_default_zones(self) -> None:
+        """
+        根据配置创建默认操作区域
+        """
+        # 实现代码...
+    
+    def _create_circular_zone(self, zone_id: str, zone_type: ZoneType, 
+                             center: Point2D, radius: float, 
+                             properties: Dict[str, Any] = None) -> None:
+        """
+        通过多边形近似创建圆形区域
+        
+        参数:
+            zone_id (str): 区域标识符
+            zone_type (ZoneType): 区域类型
+            center (Point2D): 中心点
+            radius (float): 圆的半径
+            properties (Dict[str, Any]): 区域属性
+        """
+        # 实现代码...
+    
+    def _create_transit_corridors(self) -> None:
+        """
+        创建连接关键区域的过境走廊
+        """
+        # 实现代码...
+    
+    def _create_corridor(self, corridor_id: str, start: Point2D, end: Point2D, 
+                        width: float) -> None:
+        """
+        创建两点之间的过境走廊
+        
+        参数:
+            corridor_id (str): 走廊标识符
+            start (Point2D): 起点
+            end (Point2D): 终点
+            width (float): 走廊宽度
+        """
+        # 实现代码...
+    
+    def _init_default_materials(self) -> None:
+        """
+        初始化默认材料类型
+        """
+        # 实现代码...
+    
+    def _apply_zone_terrain_effects(self, zone: MiningZone, 
+                                   terrain_type: Optional[TerrainType] = None) -> None:
+        """
+        应用区域内的地形修改
+        
+        参数:
+            zone (MiningZone): 要修改地形的区域
+            terrain_type (Optional[TerrainType]): 要应用的可选地形类型
+        """
+        # 实现代码...
+    
+    def _modify_terrain_at_point(self, grid_x: int, grid_y: int, 
+                                zone_type: ZoneType, 
+                                terrain_type: Optional[TerrainType] = None) -> None:
+        """
+        根据区域类型修改网格点的地形属性
+        
+        参数:
+            grid_x (int): 网格x坐标
+            grid_y (int): 网格y坐标
+            zone_type (ZoneType): 区域类型
+            terrain_type (Optional[TerrainType]): 可选的特定地形类型
+        """
+        # 实现代码...
+    
+    def create_terrain_features(self) -> None:
+        """
+        生成具有不同属性的真实地形特征
+        """
+        # 实现代码...
+    
+    def _generate_elevation_features(self) -> None:
+        """
+        生成山丘和山谷等高程特征
+        """
+        # 实现代码...
+    
+    def _generate_ore_deposits(self) -> None:
+        """
+        生成具有不同品位的矿床
+        """
+        # 实现代码...
+    
+    def _generate_moisture_variation(self) -> None:
+        """
+        在地形上生成水分变化
+        """
+        # 实现代码...
+    
+    def _apply_hardness_variation(self) -> None:
+        """
+        根据其他地形属性应用硬度变化
+        """
+        # 实现代码...
+    
+    def get_terrain_property(self, point: Union[Point2D, Tuple[float, float]], 
+                           property_name: str) -> float:
+        """
+        获取特定点的地形属性
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要查询的点
+            property_name (str): 属性名称('hardness', 'grade', 'elevation', 'moisture')
+            
+        返回:
+            float: 属性值
+            
+        异常:
+            ValueError: 如果属性名称无效
+        """
+        # 实现代码...
+    
+    def set_terrain_property(self, point: Union[Point2D, Tuple[float, float]], 
+                           property_name: str, value: float) -> None:
+        """
+        设置特定点的地形属性
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要修改的点
+            property_name (str): 属性名称('hardness', 'grade', 'elevation', 'moisture')
+            value (float): 新属性值
+            
+        异常:
+            ValueError: 如果属性名称无效
+        """
+        # 实现代码...
+    
+    def add_zone(self, zone: MiningZone) -> None:
+        """
+        向环境添加新的操作区域
+        
+        参数:
+            zone (MiningZone): 要添加的区域
+        """
+        # 实现代码...
+    
+    def get_zones_by_type(self, zone_type: ZoneType) -> List[MiningZone]:
+        """
+        获取特定类型的所有区域
+        
+        参数:
+            zone_type (ZoneType): 要检索的区域类型
+            
+        返回:
+            List[MiningZone]: 匹配区域列表
+        """
+        # 实现代码...
+    
+    def get_zones_containing_point(self, point: Point2D) -> List[MiningZone]:
+        """
+        获取包含点的所有区域
+        
+        参数:
+            point (Point2D): 要检查的点
+            
+        返回:
+            List[MiningZone]: 包含该点的区域列表
+        """
+        # 实现代码...
+    
+    def find_nearest_zone(self, point: Point2D, zone_type: Optional[ZoneType] = None) -> Optional[MiningZone]:
+        """
+        查找离点最近的区域
+        
+        参数:
+            point (Point2D): 参考点
+            zone_type (Optional[ZoneType]): 可选类型过滤器
+            
+        返回:
+            Optional[MiningZone]: 最近的区域，如果未找到则为None
+        """
+        # 实现代码...
+    
+    def is_traversable(self, point: Union[Point2D, Tuple[float, float]], 
+                     vehicle=None) -> bool:
+        """
+        检查点是否可被车辆通过
+        
+        考虑障碍物、地形硬度和车辆能力
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要检查的点
+            vehicle: 要检查通行性的车辆
+            
+        返回:
+            bool: 如果点可通行则为True，否则为False
+        """
+        # 实现代码...
+    
+    def calculate_traversal_cost(self, point: Union[Point2D, Tuple[float, float]], 
+                              vehicle=None) -> float:
+        """
+        计算车辆通过一个点的成本
+        
+        参数:
+            point (Union[Point2D, Tuple[float, float]]): 要检查的点
+            vehicle: 要计算成本的车辆
+            
+        返回:
+            float: 通行成本(越高=越困难)
+        """
+        # 实现代码...
+    
+    def find_path(self, start: Union[Point2D, Tuple[float, float]],
+                end: Union[Point2D, Tuple[float, float]],
+                vehicle=None) -> List[Point2D]:
+        """
+        查找从起点到终点的路径，考虑采矿特定约束
+        
+        覆盖基础find_path，使用采矿特定成本函数
+        
+        参数:
+            start (Union[Point2D, Tuple[float, float]]): 起点
+            end (Union[Point2D, Tuple[float, float]]): 终点
+            vehicle: 要查找路径的车辆
+            
+        返回:
+            List[Point2D]: 从起点到终点的路径
+            
+        异常:
+            EnvironmentError: 如果找不到路径
+        """
+        # 实现代码...
+    
+    def generate_random_environment(self) -> None:
+        """
+        生成随机化的采矿环境
+        """
+        # 实现代码...
+    
+    def _generate_random_obstacles(self) -> None:
+        """
+        在整个环境中生成随机障碍物
+        """
+        # 实现代码...
+    
+    def visualize_environment(self) -> dict:
+        """
+        生成环境的可视化数据
+        
+        返回:
+            dict: 可视化数据字典
+        """
+        # 实现代码...
+1.3.9 Obstacle (obstacle.py)
+描述: 所有障碍物类型的抽象基类，障碍物是车辆无法通过的物理屏障。
+pythonclass Obstacle(ABC, Serializable):
+    """
+    障碍物抽象基类
+    """
+    
+    @abstractmethod
+    def contains_point(self, point: Point2D) -> bool:
+        """
+        检查障碍物是否包含点
+        
+        参数:
+            point (Point2D): 要检查的位置
+            
+        返回:
+            bool: 如果点在障碍物内部或上则为True
+        """
+        pass
+    
+    @abstractmethod
+    def distance_to(self, point: Point2D) -> float:
+        """
+        计算点到障碍物的最小距离
+        
+        参数:
+            point (Point2D): 要测量的位置
+            
+        返回:
+            float: 到障碍物的最小距离(如果点在内部则为0)
+        """
+        pass
+    
+    @abstractmethod
+    def get_bounding_box(self) -> BoundingBox:
+        """
+        获取障碍物的边界框
+        
+        返回:
+            BoundingBox: 包含障碍物的最小矩形
+        """
+        pass
+    
+    @abstractmethod
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将障碍物转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        pass
+    
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Obstacle':
+        """
+        从字典表示创建障碍物
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            Obstacle: 新障碍物实例
+        """
+        pass
+1.3.10 PointObstacle (obstacle.py)
+描述: 具有半径的简单点障碍物，表示以点为中心的圆形障碍物。
+pythonclass PointObstacle(Obstacle):
+    """
+    点障碍物类
+    """
+    
+    def __init__(self, position: Point2D, radius: float = 1.0):
+        """
+        初始化点障碍物
+        
+        参数:
+            position (Point2D): 障碍物中心
+            radius (float): 障碍物半径
+        """
+        # 实现代码...
+    
+    def contains_point(self, point: Point2D) -> bool:
+        """
+        检查障碍物是否包含点
+        
+        参数:
+            point (Point2D): 要检查的位置
+            
+        返回:
+            bool: 如果点在障碍物内部或上则为True
+        """
+        # 实现代码...
+    
+    def distance_to(self, point: Point2D) -> float:
+        """
+        计算点到障碍物的最小距离
+        
+        参数:
+            point (Point2D): 要测量的位置
+            
+        返回:
+            float: 到障碍物的最小距离(如果点在内部则为0)
+        """
+        # 实现代码...
+    
+    def get_bounding_box(self) -> BoundingBox:
+        """
+        获取障碍物的边界框
+        
+        返回:
+            BoundingBox: 包含障碍物的最小矩形
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将障碍物转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'PointObstacle':
+        """
+        从字典表示创建点障碍物
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            PointObstacle: 新点障碍物实例
+            
+        异常:
+            ValueError: 如果缺少必需数据
+        """
+        # 实现代码...
+1.3.11 RectangleObstacle (obstacle.py)
+描述: 由两个角点定义的矩形障碍物，表示与坐标轴对齐的矩形。
+pythonclass RectangleObstacle(Obstacle):
+    """
+    矩形障碍物类
+    """
+    
+    def __init__(self, min_point: Point2D, max_point: Point2D):
+        """
+        初始化矩形障碍物
+        
+        参数:
+            min_point (Point2D): 最小角(左下)
+            max_point (Point2D): 最大角(右上)
+        """
+        # 实现代码...
+    
+    def contains_point(self, point: Point2D) -> bool:
+        """
+        检查障碍物是否包含点
+        
+        参数:
+            point (Point2D): 要检查的位置
+            
+        返回:
+            bool: 如果点在障碍物内部或上则为True
+        """
+        # 实现代码...
+    
+    def distance_to(self, point: Point2D) -> float:
+        """
+        计算点到障碍物的最小距离
+        
+        参数:
+            point (Point2D): 要测量的位置
+            
+        返回:
+            float: 到障碍物的最小距离(如果点在内部则为0)
+        """
+        # 实现代码...
+    
+    def get_bounding_box(self) -> BoundingBox:
+        """
+        获取障碍物的边界框
+        
+        返回:
+            BoundingBox: 包含障碍物的最小矩形
+        """
+        # 实现代码...
+    
+    @property
+    def width(self) -> float:
+        """
+        获取矩形的宽度
+        
+        返回:
+            float: 宽度
+        """
+        # 实现代码...
+    
+    @property
+    def height(self) -> float:
+        """
+        获取矩形的高度
+        
+        返回:
+            float: 高度
+        """
+        # 实现代码...
+    
+    @property
+    def area(self) -> float:
+        """
+        获取矩形的面积
+        
+        返回:
+            float: 面积
+        """
+        # 实现代码...
+    
+    @property
+    def center(self) -> Point2D:
+        """
+        获取矩形的中心点
+        
+        返回:
+            Point2D: 中心点
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将障碍物转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'RectangleObstacle':
+        """
+        从字典表示创建矩形障碍物
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            RectangleObstacle: 新矩形障碍物实例
+            
+        异常:
+            ValueError: 如果缺少必需数据
+        """
+        # 实现代码...
+1.3.12 PolygonObstacle (obstacle.py)
+描述: 由顶点列表定义的多边形障碍物，表示任意形状的闭合多边形。
+pythonclass PolygonObstacle(Obstacle):
+    """
+    多边形障碍物类
+    """
+    
+    def __init__(self, vertices: List[Point2D]):
+        """
+        初始化多边形障碍物
+        
+        参数:
+            vertices (List[Point2D]): 按顺序排列的多边形顶点
+            
+        异常:
+            ValueError: 如果多边形少于3个顶点
+        """
+        # 实现代码...
+    
+    def contains_point(self, point: Point2D) -> bool:
+        """
+        使用光线投射算法检查障碍物是否包含点
+        
+        参数:
+            point (Point2D): 要检查的位置
+            
+        返回:
+            bool: 如果点在障碍物内部或上则为True
+        """
+        # 实现代码...
+    
+    def _point_on_edge(self, point: Point2D) -> bool:
+        """
+        检查点是否位于多边形的任何边上
+        
+        参数:
+            point (Point2D): 要检查的位置
+            
+        返回:
+            bool: 如果点在任何边上则为True
+        """
+        # 实现代码...
+    
+    def _point_on_line_segment(self, p: Point2D, a: Point2D, b: Point2D) -> bool:
+        """
+        检查点p是否在线段ab上
+        
+        参数:
+            p (Point2D): 要检查的点
+            a (Point2D): 线段起点
+            b (Point2D): 线段终点
+            
+        返回:
+            bool: 如果点在线段上则为True
+        """
+        # 实现代码...
+    
+    def distance_to(self, point: Point2D) -> float:
+        """
+        计算点到障碍物的最小距离
+        
+        参数:
+            point (Point2D): 要测量的位置
+            
+        返回:
+            float: 到障碍物的最小距离(如果点在内部则为0)
+        """
+        # 实现代码...
+    
+    def _point_to_line_segment_distance(self, p: Point2D, a: Point2D, b: Point2D) -> float:
+        """
+        计算点p到线段ab的距离
+        
+        参数:
+            p (Point2D): 点
+            a (Point2D): 线段起点
+            b (Point2D): 线段终点
+            
+        返回:
+            float: 最小距离
+        """
+        # 实现代码...
+    
+    def get_bounding_box(self) -> BoundingBox:
+        """
+        获取障碍物的边界框
+        
+        返回:
+            BoundingBox: 包含障碍物的最小矩形
+        """
+        # 实现代码...
+    
+    @property
+    def perimeter(self) -> float:
+        """
+        计算多边形的周长
+        
+        返回:
+            float: 周长
+        """
+        # 实现代码...
+    
+    @property
+    def area(self) -> float:
+        """
+        使用鞋带公式计算多边形的面积
+        
+        返回:
+            float: 面积
+        """
+        # 实现代码...
+    
+    @property
+    def centroid(self) -> Point2D:
+        """
+        计算多边形的质心
+        
+        返回:
+            Point2D: 质心
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将障碍物转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'PolygonObstacle':
+        """
+        从字典表示创建多边形障碍物
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            PolygonObstacle: 新多边形障碍物实例
+            
+        异常:
+            ValueError: 如果缺少必需数据
+        """
+        # 实现代码...
+1.3.13 GridObstacle (obstacle.py)
+描述: 基于网格的环境中的网格单元格障碍物，表示网格中的单个作为障碍物的单元格。
+pythonclass GridObstacle:
+    """
+    网格障碍物类
+    """
+    
+    def __init__(self, grid_x: int, grid_y: int):
+        """
+        初始化网格障碍物
+        
+        参数:
+            grid_x (int): 网格x坐标
+            grid_y (int): 网格y坐标
+        """
+        # 实现代码...
+    
+    def __eq__(self, other):
+        """
+        检查两个网格障碍物是否相等
+        
+        参数:
+            other: 要比较的对象
+            
+        返回:
+            bool: 如果障碍物相等则为True
+        """
+        # 实现代码...
+    
+    def __hash__(self):
+        """
+        网格障碍物的哈希函数
+        
+        返回:
+            int: 哈希值
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将障碍物转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'GridObstacle':
+        """
+        从字典表示创建网格障碍物
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            GridObstacle: 新网格障碍物实例
+            
+        异常:
+            ValueError: 如果缺少必需数据
+        """
+        # 实现代码...
+1.3.14 CompositeObstacle (obstacle.py)
+描述: 由多个其他障碍物组成的复合障碍物，允许从更简单的组件创建复杂的障碍物形状。
+pythonclass CompositeObstacle(Obstacle):
+    """
+    复合障碍物类
+    """
+    
+    def __init__(self, obstacles: List[Obstacle]):
+        """
+        初始化复合障碍物
+        
+        参数:
+            obstacles (List[Obstacle]): 组件障碍物列表
+        """
+        # 实现代码...
+    
+    def contains_point(self, point: Point2D) -> bool:
+        """
+        检查任何组件障碍物是否包含点
+        
+        参数:
+            point (Point2D): 要检查的位置
+            
+        返回:
+            bool: 如果点在任何组件内部或上则为True
+        """
+        # 实现代码...
+    
+    def distance_to(self, point: Point2D) -> float:
+        """
+        计算点到任何组件的最小距离
+        
+        参数:
+            point (Point2D): 要测量的位置
+            
+        返回:
+            float: 到任何组件的最小距离(如果点在内部则为0)
+        """
+        # 实现代码...
+    
+    def get_bounding_box(self) -> BoundingBox:
+        """
+        获取包含所有组件的边界框
+        
+        返回:
+            BoundingBox: 包含所有组件的最小矩形
+        """
+        # 实现代码...
+    
+    def add_obstacle(self, obstacle: Obstacle) -> None:
+        """
+        添加组件障碍物
+        
+        参数:
+            obstacle (Obstacle): 要添加的障碍物
+        """
+        # 实现代码...
+    
+    def remove_obstacle(self, obstacle: Obstacle) -> bool:
+        """
+        移除组件障碍物
+        
+        参数:
+            obstacle (Obstacle): 要移除的障碍物
+            
+        返回:
+            bool: 如果障碍物被移除则为True，如果未找到则为False
+        """
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将障碍物转换为用于序列化的字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'CompositeObstacle':
+        """
+        从字典表示创建复合障碍物
+        
+        参数:
+            data (Dict[str, Any]): 字典表示
+            
+        返回:
+            CompositeObstacle: 新复合障碍物实例
+            
+        异常:
+            ValueError: 如果缺少必需数据
+        """
+        # 实现代码...
+
+[以此格式继续添加其他类和函数...]
+
+## 2. 算法服务层 (Algorithm Services)
+
+### 2.1 planning 模块
+
+2.1.1 PathPlanner (interfaces.py)
+描述: 路径规划器接口，定义所有路径规划算法必须实现的方法
+pythonclass PathPlanner(abc.ABC):
+    """
+    路径规划器接口
+    
+    定义了所有路径规划器必须实现的通用接口
+    """
+    
+    @abc.abstractmethod
+    def plan_path(self, start: Point2D, start_heading: float,
+                 goal: Point2D, goal_heading: float,
+                 obstacles: Optional[List[Any]] = None) -> PlanningResult:
+        """
+        规划从起点到终点的路径
+        
+        参数:
+            start (Point2D): 起始位置
+            start_heading (float): 起始朝向角度(弧度)
+            goal (Point2D): 目标位置
+            goal_heading (float): 目标朝向角度(弧度)
+            obstacles (List[Any], 可选): 障碍物列表
+            
+        返回:
+            PlanningResult: 路径规划结果
+        """
+        pass
+    
+    @abc.abstractmethod
+    def set_config(self, config: PlanningConfig) -> None:
+        """
+        更新规划器配置
+        
+        参数:
+            config (PlanningConfig): 新的规划配置
+        """
+        pass
+    
+    @abc.abstractmethod
+    def get_config(self) -> PlanningConfig:
+        """
+        获取当前规划器配置
+        
+        返回:
+            PlanningConfig: 当前配置
+        """
+        pass
+    
+    @classmethod
+    @abc.abstractmethod
+    def get_planner_type(cls) -> PlannerType:
+        """
+        获取规划器类型
+        
+        返回:
+            PlannerType: 规划器类型
+        """
+        pass
+2.1.2 PlannerFactory (interfaces.py)
+描述: 规划器工厂类，用于创建不同类型的路径规划器
+pythonclass PlannerFactory:
+    """
+    规划器工厂类
+    
+    提供创建不同类型路径规划器的方法，实现规划器的注册与实例化
+    """
+    
+    _planner_registry: Dict[PlannerType, Type[PathPlanner]] = {}
+    
+    @classmethod
+    def register_planner(cls, planner_type: PlannerType, planner_class: Type[PathPlanner]) -> None:
+        """
+        向工厂注册规划器实现
+        
+        参数:
+            planner_type (PlannerType): 规划器类型
+            planner_class (Type[PathPlanner]): 规划器实现类
+        """
+        # 实现代码...
+    
+    @classmethod
+    def create_planner(cls, planner_type: PlannerType, config: Optional[PlanningConfig] = None) -> PathPlanner:
+        """
+        创建指定类型的规划器
+        
+        参数:
+            planner_type (PlannerType): 要创建的规划器类型
+            config (PlanningConfig, 可选): 规划器配置
+            
+        返回:
+            PathPlanner: 实例化的规划器
+            
+        异常:
+            ValueError: 如果规划器类型未注册
+        """
+        # 实现代码...
+    
+    @classmethod
+    def create_default_planner(cls, config: Optional[PlanningConfig] = None) -> PathPlanner:
+        """
+        创建默认类型规划器(Hybrid A*)
+        
+        参数:
+            config (PlanningConfig, 可选): 规划器配置
+            
+        返回:
+            PathPlanner: 实例化的规划器
+        """
+        # 实现代码...
+    
+    @classmethod
+    def get_available_planners(cls) -> List[PlannerType]:
+        """
+        获取所有已注册的规划器类型
+        
+        返回:
+            List[PlannerType]: 可用规划器类型列表
+        """
+        # 实现代码...
+2.1.3 PlanningConfig (common.py)
+描述: 路径规划配置类，存储算法参数和限制
+python@dataclass
+class PlanningConfig:
+    """
+    路径规划配置
+    
+    包含算法特定参数和限制
+    """
+    
+    # 通用参数
+    max_iterations: int = 10000        # 最大迭代次数
+    time_limit: float = 5.0            # 时间限制(秒)
+    step_size: float = 1.0             # 离散化步长
+    
+    # 网格参数
+    grid_resolution: float = 0.5       # 混合算法的网格单元大小
+    
+    # 启发式参数
+    heuristic_weight: float = 1.0      # 启发函数权重因子
+    
+    # 优化参数
+    smoothing_factor: float = 0.5      # 路径平滑因子
+    path_simplification: bool = True   # 是否简化路径
+    smoothing_iterations: int = 10     # 路径平滑迭代次数
+    
+    # 采样参数
+    sampling_radius: float = 10.0      # RRT采样半径
+    
+    # 成本权重
+    distance_weight: float = 1.0       # 距离成本权重
+    smoothness_weight: float = 0.5     # 平滑性成本权重
+    direction_change_weight: float = 2.0  # 方向变化成本权重
+    
+    # 约束
+    constraints: PlanningConstraints = field(default_factory=PlanningConstraints)
+2.1.4 PlanningConstraints (common.py)
+描述: 路径规划约束条件，定义车辆物理和操作限制
+python@dataclass
+class PlanningConstraints:
+    """
+    路径规划约束
+    
+    包含车辆的物理和操作约束
+    """
+    
+    # 车辆物理约束
+    min_turning_radius: float = 5.0    # 最小转弯半径(米)
+    max_steering_angle: float = 0.7    # 最大转向角(弧度)
+    vehicle_length: float = 5.0        # 车辆长度(米)
+    vehicle_width: float = 2.0         # 车辆宽度(米)
+    max_speed: float = 5.0             # 最大速度(m/s)
+    max_acceleration: float = 1.0      # 最大加速度(m/s²)
+    
+    # 规划约束
+    allow_reverse: bool = True         # 是否允许倒车
+    direction_changes_limit: int = 10  # 最大方向变化次数
+    
+    # 安全边距
+    obstacle_margin: float = 1.0       # 障碍物周围安全边距
+    vehicle_margin: float = 1.0        # 其他车辆周围安全边距
+2.1.5 HybridAStarPlanner (hybrid_astar.py)
+描述: 混合A*路径规划器，结合离散网格搜索和连续运动基元
+pythonclass HybridAStarPlanner:
+    """
+    混合A*路径规划器
+    
+    结合离散网格搜索和连续运动基元，为具有非完整约束的车辆寻找可行路径
+    """
+    
+    def __init__(self, config: Optional[PlanningConfig] = None):
+        """
+        初始化混合A*规划器
+        
+        参数:
+            config (PlanningConfig, 可选): 规划配置
+        """
+        # 实现代码...
+    
+    def plan(self, start_x: float, start_y: float, start_heading: float,
+             goal_x: float, goal_y: float, goal_heading: float,
+             obstacles: List[Any] = None) -> PlanningResult:
+        """
+        使用混合A*规划从起点到终点的路径
+        
+        参数:
+            start_x (float): 起始x坐标
+            start_y (float): 起始y坐标
+            start_heading (float): 起始朝向角度(弧度)
+            goal_x (float): 目标x坐标
+            goal_y (float): 目标y坐标
+            goal_heading (float): 目标朝向角度(弧度)
+            obstacles (List[Any], 可选): 障碍物列表
+            
+        返回:
+            PlanningResult: 规划结果，包含路径和元数据
+        """
+        # 实现代码...
+    
+    def plan_path(self, start: Point2D, start_heading: float,
+                 goal: Point2D, goal_heading: float,
+                 obstacles: List[Any] = None) -> PlanningResult:
+        """
+        使用混合A*规划路径(替代接口)
+        
+        参数:
+            start (Point2D): 起点
+            start_heading (float): 起始朝向(弧度)
+            goal (Point2D): 终点
+            goal_heading (float): 目标朝向(弧度)
+            obstacles (List[Any], 可选): 障碍物列表
+            
+        返回:
+            PlanningResult: 规划结果
+        """
+        # 实现代码...
+2.1.6 ReedsSheppPlanner (reeds_shepp.py)
+描述: Reeds-Shepp曲线路径规划器，计算有最小转弯半径约束的最优路径
+pythonclass ReedsSheppPlanner:
+    """
+    Reeds-Shepp曲线路径规划器
+    
+    实现Reeds-Shepp曲线，为具有最小转弯半径约束且可前进后退的车辆计算最优路径
+    """
+    
+    def __init__(self, config: Optional[PlanningConfig] = None):
+        """
+        初始化Reeds-Shepp规划器
+        
+        参数:
+            config (PlanningConfig, 可选): 规划配置
+        """
+        # 实现代码...
+    
+    def plan(self, start_x: float, start_y: float, start_heading: float,
+             goal_x: float, goal_y: float, goal_heading: float) -> PlanningResult:
+        """
+        规划从起点到终点的Reeds-Shepp路径
+        
+        参数:
+            start_x (float): 起始x坐标
+            start_y (float): 起始y坐标
+            start_heading (float): 起始朝向角度(弧度)
+            goal_x (float): 目标x坐标
+            goal_y (float): 目标y坐标
+            goal_heading (float): 目标朝向角度(弧度)
+            
+        返回:
+            PlanningResult: 规划结果，包含路径和元数据
+        """
+        # 实现代码...
+2.1.7 PlanningResult (common.py)
+描述: 路径规划操作的结果，包含路径、状态和元数据
+python@dataclass
+class PlanningResult:
+    """
+    路径规划操作的结果
+    
+    包含规划的路径、状态和元数据
+    """
+    path: Optional[Path] = None                  # 完整路径
+    segments: List[PathSegment] = field(default_factory=list)  # 路径段
+    status: PlanningStatus = PlanningStatus.FAILURE  # 规划状态
+    computation_time: float = 0.0                # 计算时间(秒)
+    iterations: int = 0                          # 迭代次数
+    cost: float = float('inf')                   # 路径成本
+    metadata: Dict[str, Any] = field(default_factory=dict)  # 附加元数据
+2.1.8 PathSegment (common.py)
+描述: 路径的分段表示，包含特定运动类型和方向的路径部分
+python@dataclass
+class PathSegment:
+    """
+    路径段及相关元数据
+    
+    表示具有特定运动类型和方向的路径部分
+    """
+    points: List[Point2D]               # 段中的点
+    motion_type: MotionType             # 运动类型
+    direction: DrivingDirection         # 行驶方向
+    length: float = 0.0                 # 段长度
+    curvature: float = 0.0              # 段曲率
+    metadata: Dict[str, Any] = field(default_factory=dict)  # 附加元数据
+2.1.9 通用函数 (common.py)
+描述: 路径规划通用工具函数
+pythondef merge_path_segments(segments: List[PathSegment]) -> Path:
+    """
+    将路径段合并为单一连续路径
+    
+    参数:
+        segments (List[PathSegment]): 路径段列表
+        
+    返回:
+        Path: 合并后的路径
+    """
+    # 实现代码...
+
+def discretize_path_with_headings(path: Path, step_size: float) -> List[Tuple[Point2D, float]]:
+    """
+    将路径离散化为带有关联朝向的点
+    
+    参数:
+        path (Path): 输入路径
+        step_size (float): 点之间的距离
+        
+    返回:
+        List[Tuple[Point2D, float]]: (点, 朝向)元组列表
+    """
+    # 实现代码...
+
+def check_collision(path: Path, obstacles: List[Any], vehicle_width: float, vehicle_length: float) -> bool:
+    """
+    检查路径是否与障碍物碰撞
+    
+    参数:
+        path (Path): 要检查的路径
+        obstacles (List[Any]): 障碍物列表
+        vehicle_width (float): 车辆宽度
+        vehicle_length (float): 车辆长度
+        
+    返回:
+        bool: 如果检测到碰撞则为True，否则为False
+    """
+    # 实现代码...
+
+def calculate_path_cost(path: Path, config: PlanningConfig) -> float:
+    """
+    基于多种因素计算路径成本
+    
+    参数:
+        path (Path): 要评估的路径
+        config (PlanningConfig): 带有成本权重的规划配置
+        
+    返回:
+        float: 总路径成本
+    """
+    # 实现代码...
+
+def optimize_path(path: Path, config: PlanningConfig, obstacles: List[Any] = None) -> Path:
+    """
+    通过平滑和简化优化路径
+    
+    参数:
+        path (Path): 要优化的路径
+        config (PlanningConfig): 规划配置
+        obstacles (List[Any], 可选): 优化过程中要避开的障碍物列表
+        
+    返回:
+        Path: 优化后的路径
+    """
+    # 实现代码...[以此格式继续添加其他类和函数...]
+
+
+
+## 3. 协调调度层 (Coordination)
+
+[按照相同的格式继续记录]
+
+## 4. 地图与环境层 (Map & Environment)
+
+[按照相同的格式继续记录]
+
+## 5. 界面层 (UI)
+
+[按照相同的格式继续记录]
+
+## 6. 支持工具层 (Utilities)
+
+[按照相同的格式继续记录]
+
+---
+
+## 附录
+
+### A. 数据类型定义
+
+```python
+class Point2D:
+    """二维点类型"""
+    
+    def __init__(self, x: float, y: float):
+        """
+        初始化二维点
+        
+        参数:
+            x (float): X坐标
+            y (float): Y坐标
+        """
+        self.x = x
+        self.y = y
+    
+    def distance_to(self, other: 'Point2D') -> float:
+        """
+        计算到另一点的距离
+        
+        参数:
+            other (Point2D): 另一个点
+            
+        返回:
+            float: 两点之间的欧几里得距离
+        """
+        return math.sqrt((self.x - other.x)**2 + (self.y - other.y)**2)
+```
+2.2 common 模块
+2.2.1 Graph (graph.py)
+描述: 通用图数据结构，为搜索算法提供基础
+pythonclass Graph(Generic[T]):
+    """
+    通用图数据结构
+    
+    提供构建和操作具有任意节点类型的图的操作
+    """
+    
+    def __init__(self):
+        """初始化一个空图"""
+        self.nodes: Set[T] = set()  # 所有节点集合
+        self.edges: Dict[T, List[Edge[T]]] = {}  # 邻接表表示
+        self.metadata: Dict[str, Any] = {}  # 图元数据
+    
+    def add_node(self, node: T, **metadata) -> None:
+        """
+        向图中添加节点
+        
+        参数:
+            node: 要添加的节点
+            **metadata: 可选的节点元数据
+        """
+        # 实现代码...
+    
+    def add_edge(self, source: T, target: T, cost: float = 1.0, 
+                edge_type: EdgeType = EdgeType.DIRECTED, **metadata) -> None:
+        """
+        向图中添加边
+        
+        参数:
+            source: 源节点
+            target: 目标节点
+            cost: 边成本/权重
+            edge_type: 边类型
+            **metadata: 可选的边元数据
+        """
+        # 实现代码...
+    
+    def get_neighbors(self, node: T) -> List[T]:
+        """
+        获取节点的所有邻居
+        
+        参数:
+            node: 要获取邻居的节点
+            
+        返回:
+            List[T]: 邻居节点列表
+        """
+        # 实现代码...
+    
+    def has_node(self, node: T) -> bool:
+        """
+        检查节点是否存在于图中
+        
+        参数:
+            node: 要检查的节点
+            
+        返回:
+            bool: 如果节点存在则为True
+        """
+        # 实现代码...
+    
+    def get_connected_components(self) -> List[Set[T]]:
+        """
+        获取图的连通分量
+        
+        返回:
+            List[Set[T]]: 连通分量列表
+        """
+        # 实现代码...
+2.2.2 GridGraph (graph.py)
+描述: 基于网格的图表示，为路径规划中的2D环境提供便捷操作
+pythonclass GridGraph(Graph[Tuple[int, int]]):
+    """
+    基于网格的图表示
+    
+    Graph的专用化，用于路径规划中常见的2D网格环境
+    """
+    
+    def __init__(self, width: int, height: int, diagonal: bool = True):
+        """
+        初始化网格图
+        
+        参数:
+            width: 网格宽度
+            height: 网格高度
+            diagonal: 是否包含对角线连接
+        """
+        # 实现代码...
+    
+    def set_obstacle(self, x: int, y: int, is_obstacle: bool = True) -> None:
+        """
+        将单元格设置为障碍物
+        
+        参数:
+            x: X坐标
+            y: Y坐标
+            is_obstacle: 单元格是否为障碍物
+        """
+        # 实现代码...
+    
+    def is_obstacle(self, x: int, y: int) -> bool:
+        """
+        检查单元格是否为障碍物
+        
+        参数:
+            x: X坐标
+            y: Y坐标
+            
+        返回:
+            bool: 如果单元格是障碍物则为True
+        """
+        # 实现代码...
+    
+    def is_valid_position(self, x: int, y: int) -> bool:
+        """
+        检查位置是否有效（在边界内且不是障碍物）
+        
+        参数:
+            x: X坐标
+            y: Y坐标
+            
+        返回:
+            bool: 如果位置有效则为True
+        """
+        # 实现代码...
+2.2.3 WeightedGraph (graph.py)
+描述: 带权图，提供最小生成树和最短路径树等专用算法
+pythonclass WeightedGraph(Graph[T]):
+    """
+    带权图及其专用操作
+    
+    扩展基础Graph类，提供针对带权图优化的操作
+    """
+    
+    def get_minimum_spanning_tree(self) -> 'WeightedGraph[T]':
+        """
+        使用Kruskal算法获取最小生成树
+        
+        返回:
+            WeightedGraph[T]: 最小生成树
+        """
+        # 实现代码...
+    
+    def get_shortest_path_tree(self, source: T) -> 'WeightedGraph[T]':
+        """
+        使用Dijkstra算法获取最短路径树
+        
+        参数:
+            source: 源节点
+            
+        返回:
+            WeightedGraph[T]: 最短路径树
+        """
+        # 实现代码...
+2.2.4 Search (search.py)
+描述: 提供各种图搜索算法的静态类
+pythonclass Search:
+    """
+    提供各种搜索算法的静态类
+    """
+    
+    @staticmethod
+    @timed("breadth_first_search")
+    def breadth_first_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]:
+        """
+        在图上执行广度优先搜索
+        
+        参数:
+            graph: 要搜索的图
+            start: 起始节点
+            goal: 目标节点
+            
+        返回:
+            SearchResult[T]: 搜索结果
+        """
+        # 实现代码...
+    
+    @staticmethod
+    @timed("depth_first_search")
+    def depth_first_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]:
+        """
+        在图上执行深度优先搜索
+        
+        参数:
+            graph: 要搜索的图
+            start: 起始节点
+            goal: 目标节点
+            
+        返回:
+            SearchResult[T]: 搜索结果
+        """
+        # 实现代码...
+    
+    @staticmethod
+    @timed("dijkstra")
+    def dijkstra(graph: Graph[T], start: T, goal: Optional[T] = None) -> SearchResult[T]:
+        """
+        在图上执行Dijkstra算法
+        
+        参数:
+            graph: 要搜索的图
+            start: 起始节点
+            goal: 目标节点，或None以计算单源最短路径
+            
+        返回:
+            SearchResult[T]: 搜索结果
+        """
+        # 实现代码...
+    
+    @staticmethod
+    @timed("a_star")
+    def a_star(graph: Graph[T], start: T, goal: T, 
+              heuristic: Callable[[T, T], float]) -> SearchResult[T]:
+        """
+        在图上执行A*搜索
+        
+        参数:
+            graph: 要搜索的图
+            start: 起始节点
+            goal: 目标节点
+            heuristic: 启发式函数h(node, goal) -> 估计成本
+            
+        返回:
+            SearchResult[T]: 搜索结果
+        """
+        # 实现代码...
+    
+    @staticmethod
+    @timed("bidirectional_search")
+    def bidirectional_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]:
+        """
+        在图上执行双向广度优先搜索
+        
+        参数:
+            graph: 要搜索的图
+            start: 起始节点
+            goal: 目标节点
+            
+        返回:
+            SearchResult[T]: 搜索结果
+        """
+        # 实现代码...
+2.2.5 SearchResult (search.py)
+描述: 搜索操作的结果数据结构
+python@dataclass
+class SearchResult(Generic[T]):
+    """图搜索操作的结果"""
+    success: bool = False             # 是否找到路径
+    path: List[T] = field(default_factory=list)  # 从起点到终点的路径
+    cost: float = float('inf')        # 总路径成本
+    visited: Set[T] = field(default_factory=set)  # 已访问节点集合
+    expanded: int = 0                 # 扩展的节点数
+    computation_time: float = 0.0     # 计算时间(秒)
+    metadata: Dict[str, Any] = field(default_factory=dict)  # 附加元数据
+2.2.6 Edge (graph.py)
+描述: 图中连接两个节点的边
+python@dataclass
+class Edge(Generic[T]):
+    """
+    图中连接两个节点的边
+    
+    表示节点之间的连接，具有相关成本
+    """
+    source: T                     # 源节点
+    target: T                     # 目标节点
+    cost: float = 1.0             # 边成本/权重
+    edge_type: EdgeType = EdgeType.DIRECTED  # 边类型
+    metadata: Dict[str, Any] = field(default_factory=dict)  # 附加元数据
+2.2.7 辅助函数 (search.py)
+描述: 搜索算法中使用的距离和路径工具函数
+pythondef manhattan_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float:
+    """
+    计算两点间的曼哈顿距离
+    
+    参数:
+        p1: 第一个点(x, y)
+        p2: 第二个点(x, y)
+        
+    返回:
+        float: 曼哈顿距离
+    """
+    # 实现代码...
+
+def euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
+    """
+    计算两点间的欧几里得距离
+    
+    参数:
+        p1: 第一个点(x, y)
+        p2: 第二个点(x, y)
+        
+    返回:
+        float: 欧几里得距离
+    """
+    # 实现代码...
+
+def smooth_path(path: List[T], max_deviation: float = 1.0) -> List[T]:
+    """
+    通过移除不必要的路点来平滑路径
+    
+    使用Ramer-Douglas-Peucker算法进行路径简化
+    
+    参数:
+        path: 原始路径
+        max_deviation: 允许的最大偏差
+        
+    返回:
+        List[T]: 平滑后的路径
+    """
+    # 实现代码...
+2.3 conflict 模块
+2.3.1 ConflictResolver (interfaces.py)
+描述: 冲突解决器抽象基类
+pythonclass ConflictResolver(abc.ABC):
+    """冲突解决器抽象基类"""
+    
+    @abc.abstractmethod
+    def find_conflicts(self, paths: Dict[str, Path], 
+                      vehicles: Dict[str, Any] = None) -> List[Any]:
+        """
+        检测给定路径集合中的冲突
+        
+        参数:
+            paths: 车辆ID到路径的映射
+            vehicles: 车辆ID到车辆对象的映射(可选)，用于获取车辆属性
+            
+        返回:
+            冲突列表
+        """
+        pass
+        
+    @abc.abstractmethod
+    def resolve_conflicts(self, paths: Dict[str, Path], 
+                         path_planner: Any,
+                         vehicles: Dict[str, Any] = None, 
+                         obstacles: List[Any] = None) -> Dict[str, Path]:
+        """
+        解决给定路径集合中的冲突
+        
+        参数:
+            paths: 车辆ID到路径的映射
+            path_planner: 用于规划单个车辆路径的规划器
+            vehicles: 车辆ID到车辆对象的映射
+            obstacles: 障碍物列表
+            
+        返回:
+            无冲突的路径映射表
+        """
+        pass
+2.3.2 ConflictResolverFactory (interfaces.py)
+描述: 冲突解决器工厂类
+pythonclass ConflictResolverFactory:
+    """冲突解决器工厂类"""
+    
+    _resolvers = {}
+    
+    @classmethod
+    def register_resolver(cls, resolver_type: ConflictResolverType, resolver_class):
+        """
+        注册冲突解决器类
+        
+        参数:
+            resolver_type: 解决器类型
+            resolver_class: 解决器实现类
+        """
+        # 实现代码...
+    
+    @classmethod
+    def create_resolver(cls, resolver_type: ConflictResolverType, config: Optional[Any] = None) -> ConflictResolver:
+        """
+        创建冲突解决器实例
+        
+        参数:
+            resolver_type: 解决器类型
+            config: 可选配置
+            
+        返回:
+            ConflictResolver: 实例化的解决器
+        """
+        # 实现代码...
+    
+    @classmethod
+    def get_available_resolvers(cls) -> List[ConflictResolverType]:
+        """
+        获取可用的冲突解决器类型
+        
+        返回:
+            List[ConflictResolverType]: 可用解决器类型列表
+        """
+        # 实现代码...
+2.3.3 CBSResolver (cbs.py)
+描述: 基于冲突的搜索(CBS)算法实现
+pythonclass CBSResolver(ConflictResolver):
+    """基于冲突的搜索(CBS)算法实现"""
+    
+    def __init__(self, config: Optional[CBSConfig] = None):
+        """
+        初始化CBS解算器
+        
+        参数:
+            config: CBS配置，如果为None则使用默认配置
+        """
+        # 实现代码...
+    
+    @timed("cbs_find_conflicts")
+    def find_conflicts(self, paths: Dict[str, Path], 
+                      vehicles: Dict[str, Any] = None) -> List[Conflict]:
+        """
+        检测给定路径集合中的冲突
+        
+        参数:
+            paths: 车辆ID到路径的映射
+            vehicles: 车辆ID到车辆对象的映射(可选)，用于获取车辆属性
+            
+        返回:
+            冲突列表
+        """
+        # 实现代码...
+    
+    @timed("cbs_resolve_conflicts")
+    def resolve_conflicts(self, paths: Dict[str, Path], 
+                         path_planner: Any,
+                         vehicles: Dict[str, Any] = None, 
+                         obstacles: List[Any] = None) -> Dict[str, Path]:
+        """
+        解决给定路径集合中的冲突
+        
+        参数:
+            paths: 车辆ID到路径的映射
+            path_planner: 用于规划单个车辆路径的规划器
+            vehicles: 车辆ID到车辆对象的映射
+            obstacles: 障碍物列表
+            
+        返回:
+            无冲突的路径映射表
+        """
+        # 实现代码...
+2.3.4 CBSNode (common.py)
+描述: CBS搜索树节点
+python@dataclass
+class CBSNode:
+    """CBS搜索树节点"""
+    constraints: Set[Constraint] = field(default_factory=set)
+    paths: Dict[str, PathWithTimesteps] = field(default_factory=dict)
+    cost: float = 0.0
+    conflicts: List[Conflict] = field(default_factory=list)
+    parent: Optional['CBSNode'] = None
+    
+    def update_cost(self):
+        """更新节点成本（所有路径的总长度）"""
+        # 实现代码...
+    
+    def add_constraint(self, constraint: Constraint):
+        """
+        添加约束
+        
+        参数:
+            constraint: 要添加的约束
+        """
+        # 实现代码...
+    
+    def get_constraints_for_vehicle(self, vehicle_id: str) -> List[Constraint]:
+        """
+        获取特定车辆的约束列表
+        
+        参数:
+            vehicle_id: 车辆ID
+            
+        返回:
+            List[Constraint]: 约束列表
+        """
+        # 实现代码...
+    
+    def is_solution(self) -> bool:
+        """
+        检查是否为解决方案（无冲突）
+        
+        返回:
+            bool: 如果无冲突则为True
+        """
+        # 实现代码...
+2.3.5 Conflict (common.py)
+描述: 冲突数据结构
+python@dataclass
+class Conflict:
+    """冲突数据结构"""
+    conflict_type: ConflictType
+    vehicle_a_id: str
+    vehicle_b_id: str
+    location_a: Point2D
+    location_b: Point2D
+    time_step: int
+    # 对于边冲突，需要记录先前位置
+    prev_location_a: Optional[Point2D] = None
+    prev_location_b: Optional[Point2D] = None
+    # 额外信息
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        转换为字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+2.3.6 Constraint (common.py)
+描述: 约束数据结构
+python@dataclass
+class Constraint:
+    """约束数据结构"""
+    constraint_type: ConstraintType
+    vehicle_id: str
+    location: Point2D
+    time_step: int
+    # 对于边约束，需要记录目标位置
+    target_location: Optional[Point2D] = None
+    # 元数据
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    def __hash__(self):
+        """哈希函数以支持在集合中使用"""
+        # 实现代码...
+    
+    def __eq__(self, other):
+        """判断两个约束是否相等"""
+        # 实现代码...
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        转换为字典
+        
+        返回:
+            Dict[str, Any]: 字典表示
+        """
+        # 实现代码...
+2.3.7 PathWithTimesteps (common.py)
+描述: 带时间步的路径
+python@dataclass
+class PathWithTimesteps:
+    """带时间步的路径"""
+    vehicle_id: str
+    points: List[Point2D]
+    timesteps: List[int]
+    
+    def position_at_time(self, timestep: int) -> Optional[Point2D]:
+        """
+        获取指定时间的位置
+        
+        参数:
+            timestep: 时间步
+            
+        返回:
+            Optional[Point2D]: 位置点，如果没有则为None
+        """
+        # 实现代码...
+    
+    def get_timestep_range(self) -> Tuple[int, int]:
+        """
+        获取时间范围
+        
+        返回:
+            Tuple[int, int]: (最小时间步, 最大时间步)
+        """
+        # 实现代码...
+    
+    def violates_constraint(self, constraint: Constraint) -> bool:
+        """
+        检查路径是否违反约束
+        
+        参数:
+            constraint: 要检查的约束
+            
+        返回:
+            bool: 如果违反约束则为True
+        """
+        # 实现代码...
+2.3.8 辅助函数 (common.py)
+描述: 冲突检测和解决的辅助函数
+pythondef detect_conflicts(paths: Dict[str, PathWithTimesteps], 
+                   vehicle_radius: float = 1.0,
+                   time_horizon: int = 100) -> List[Conflict]:
+    """
+    检测多个车辆路径之间的冲突
+    
+    参数:
+        paths: 车辆ID到带时间步路径的映射
+        vehicle_radius: 车辆半径，用于碰撞检测
+        time_horizon: 检测冲突的时间步范围
+        
+    返回:
+        List[Conflict]: 冲突列表
+    """
+    # 实现代码...
+
+def create_constraints_from_conflict(conflict: Conflict) -> Tuple[Constraint, Constraint]:
+    """
+    从冲突创建约束对
+    
+    参数:
+        conflict: 冲突实例
+        
+    返回:
+        Tuple[Constraint, Constraint]: 两个约束，分别应用于冲突中的两个车辆
+    """
+    # 实现代码...
+
+def path_to_timesteps(path: Path, speed: float = 1.0, start_time: int = 0) -> PathWithTimesteps:
+    """
+    将路径转换为带时间步的路径
+    
+    参数:
+        path: 原始路径
+        speed: 车辆速度 (单位/时间步)
+        start_time: 起始时间步
+        
+    返回:
+        PathWithTimesteps: 带时间步的路径
+    """
+    # 实现代码...
+
+def timesteps_to_path(path_with_timesteps: PathWithTimesteps) -> Path:
+    """
+    将带时间步的路径转换为普通路径
+    
+    参数:
+        path_with_timesteps: 带时间步的路径
+        
+    返回:
+        Path: 普通路径
+    """
+    # 实现代码...
+3. 协调调度层 (Coordination)
+3.1 allocation 模块
+3.1.1 TaskAllocator (base.py)
+描述: 任务分配器抽象基类，负责将任务分配给车辆
+pythonclass TaskAllocator(abc.ABC):
+    """
+    任务分配器基础接口
+    
+    任务分配器负责根据各种优化标准和约束将任务分配给车辆
+    """
+    
+    def __init__(self, config: Optional[AllocationConfig] = None):
+        """
+        初始化任务分配器
+        
+        参数:
+            config: 分配器配置
+        """
+        # 实现代码...
+    
+    @abc.abstractmethod
+    def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], 
+                cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult:
+        """
+        将任务分配给车辆
+        
+        参数:
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            cost_matrix: 可选的分配成本矩阵
+                         键为(vehicle_id, task_id)元组，值为成本
+            
+        返回:
+            AllocationResult: 分配结果
+        """
+        pass
+    
+    @abc.abstractmethod
+    def reallocate(self, current_allocations: Dict[str, List[str]],
+                  new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], 
+                  cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult:
+        """
+        在条件变化时重新分配任务
+        
+        参数:
+            current_allocations: 当前车辆ID到任务ID列表的映射
+            new_tasks: 新任务ID到任务对象的映射字典
+            available_vehicles: 可用车辆ID到车辆对象的映射字典
+            cost_matrix: 可选的分配成本矩阵
+            
+        返回:
+            AllocationResult: 更新后的分配结果
+        """
+        pass
+    
+    def get_strategy(self) -> AllocationStrategy:
+        """
+        获取分配器的策略
+        
+        返回:
+            AllocationStrategy: 分配策略
+        """
+        # 实现代码...
+    
+    def set_config(self, config: AllocationConfig) -> None:
+        """
+        更新分配器配置
+        
+        参数:
+            config: 新配置
+        """
+        # 实现代码...
+    
+    def validate_allocation(self, allocation: Dict[str, List[str]], 
+                          tasks: Dict[str, Any], vehicles: Dict[str, Any]) -> bool:
+        """
+        验证分配是否满足所有约束
+        
+        参数:
+            allocation: 车辆ID到任务ID列表的映射
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            
+        返回:
+            bool: 如果分配有效则为True
+        """
+        # 实现代码...
+    
+    def calculate_objective_value(self, allocation: Dict[str, List[str]],
+                                tasks: Dict[str, Any], vehicles: Dict[str, Any],
+                                cost_matrix: Dict[Tuple[str, str], float]) -> float:
+        """
+        计算分配的目标值
+        
+        参数:
+            allocation: 车辆ID到任务ID列表的映射
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            cost_matrix: 分配成本矩阵
+            
+        返回:
+            float: 目标值(越低越好)
+        """
+        # 实现代码...
+3.1.2 PriorityAllocator (priority_allocator.py)
+描述: 基于优先级的任务分配器，根据任务优先级和车辆适应性分配任务
+pythonclass PriorityAllocator(TaskAllocator):
+    """
+    基于优先级的任务分配器
+    
+    根据任务优先级和车辆适应性分配任务，使用贪心方法最小化总成本
+    """
+    
+    def __init__(self, config: Optional[AllocationConfig] = None):
+        """
+        初始化优先级分配器
+        
+        参数:
+            config: 分配器配置
+        """
+        # 实现代码...
+    
+    @timed("priority_allocation")
+    def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], 
+                cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult:
+        """
+        基于优先级将任务分配给车辆
+        
+        参数:
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            cost_matrix: 可选的分配成本矩阵
+            
+        返回:
+            AllocationResult: 分配结果
+        """
+        # 实现代码...
+    
+    @timed("priority_reallocation")
+    def reallocate(self, current_allocations: Dict[str, List[str]],
+                  new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], 
+                  cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult:
+        """
+        在条件变化时重新分配任务
+        
+        此实现保留现有分配，仅将新任务分配给可用车辆
+        
+        参数:
+            current_allocations: 当前车辆ID到任务ID列表的映射
+            new_tasks: 新任务ID到任务对象的映射字典
+            available_vehicles: 可用车辆ID到车辆对象的映射字典
+            cost_matrix: 可选的分配成本矩阵
+            
+        返回:
+            AllocationResult: 更新后的分配结果
+        """
+        # 实现代码...
+    
+    def _create_default_cost_matrix(self, tasks: Dict[str, Any], 
+                                  vehicles: Dict[str, Any]) -> Dict[Tuple[str, str], float]:
+        """
+        基于距离创建默认成本矩阵
+        
+        参数:
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            
+        返回:
+            Dict[Tuple[str, str], float]: 成本矩阵
+        """
+        # 实现代码...
+    
+    def _is_vehicle_suitable(self, vehicle: Any, task: Any) -> bool:
+        """
+        检查车辆是否适合任务
+        
+        参数:
+            vehicle: 车辆对象
+            task: 任务对象
+            
+        返回:
+            bool: 如果车辆适合任务则为True
+        """
+        # 实现代码...
+3.1.3 MIQPAllocator (miqp_allocator.py)
+描述: 基于混合整数二次规划的任务分配器，计算最优任务分配方案
+pythonclass MIQPAllocator(TaskAllocator):
+    """
+    基于混合整数二次规划(MIQP)的任务分配器
+    
+    通过将问题制定为混合整数二次规划并使用优化求解器求解，找到最优的任务分配方案
+    """
+    
+    def __init__(self, config: Optional[AllocationConfig] = None):
+        """
+        初始化MIQP分配器
+        
+        参数:
+            config: 分配器配置
+        """
+        # 实现代码...
+    
+    @timed("miqp_allocation")
+    def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], 
+                cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult:
+        """
+        使用混合整数二次规划将任务分配给车辆
+        
+        参数:
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            cost_matrix: 可选的分配成本矩阵
+            
+        返回:
+            AllocationResult: 分配结果
+        """
+        # 实现代码...
+    
+    @timed("miqp_reallocation")
+    def reallocate(self, current_allocations: Dict[str, List[str]],
+                  new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], 
+                  cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult:
+        """
+        在条件变化时重新分配任务
+        
+        该实现创建一个包含以下内容的新优化问题:
+        1. 现有分配作为固定约束
+        2. 将新任务分配给可用车辆
+        
+        参数:
+            current_allocations: 当前车辆ID到任务ID列表的映射
+            new_tasks: 新任务ID到任务对象的映射字典
+            available_vehicles: 可用车辆ID到车辆对象的映射字典
+            cost_matrix: 可选的分配成本矩阵
+            
+        返回:
+            AllocationResult: 更新后的分配结果
+        """
+        # 实现代码...
+    
+    def _create_default_cost_matrix(self, tasks: Dict[str, Any], 
+                                  vehicles: Dict[str, Any]) -> Dict[Tuple[str, str], float]:
+        """
+        基于距离创建默认成本矩阵
+        
+        参数:
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            
+        返回:
+            Dict[Tuple[str, str], float]: 成本矩阵
+        """
+        # 实现代码...
+    
+    def _is_vehicle_suitable(self, vehicle: Any, task: Any) -> bool:
+        """
+        检查车辆是否适合任务
+        
+        参数:
+            vehicle: 车辆对象
+            task: 任务对象
+            
+        返回:
+            bool: 如果车辆适合任务则为True
+        """
+        # 实现代码...
+    
+    def _solve_with_pulp(self, tasks: Dict[str, Any], vehicles: Dict[str, Any],
+                       cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult:
+        """
+        使用PuLP求解器求解分配问题
+        
+        参数:
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            cost_matrix: 分配成本矩阵
+            start_time: 计算时间跟踪的开始时间
+            
+        返回:
+            AllocationResult: 分配结果
+        """
+        # 实现代码...
+    
+    def _solve_with_gurobi(self, tasks: Dict[str, Any], vehicles: Dict[str, Any],
+                        cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult:
+        """
+        使用Gurobi求解器求解分配问题
+        
+        参数:
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            cost_matrix: 分配成本矩阵
+            start_time: 计算时间跟踪的开始时间
+            
+        返回:
+            AllocationResult: 分配结果
+        """
+        # 实现代码...
+    
+    def _solve_with_cvxpy(self, tasks: Dict[str, Any], vehicles: Dict[str, Any],
+                       cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult:
+        """
+        使用CVXPY求解器求解分配问题
+        
+        参数:
+            tasks: 任务ID到任务对象的映射字典
+            vehicles: 车辆ID到车辆对象的映射字典
+            cost_matrix: 分配成本矩阵
+            start_time: 计算时间跟踪的开始时间
+            
+        返回:
+            AllocationResult: 分配结果
+        """
+        # 实现代码...
+3.2.1 Dispatcher (base.py)
+描述: 调度器抽象基类，负责任务分配和车辆协调
+pythonclass Dispatcher(abc.ABC, Serializable):
+    """
+    调度器抽象基类
+    
+    调度器管理任务到车辆的分配，并协调它们的移动和行动
+    """
+    
+    def __init__(self, config: Optional[DispatcherConfig] = None):
+        """
+        初始化调度器
+        
+        参数:
+            config: 调度器配置
+        """
+        # 实现代码...
+    
+    @abc.abstractmethod
+    def add_vehicle(self, vehicle) -> None:
+        """
+        向调度系统添加车辆
+        
+        参数:
+            vehicle: 要添加的车辆
+        """
+        pass
+    
+    @abc.abstractmethod
+    def remove_vehicle(self, vehicle_id: str) -> bool:
+        """
+        从调度系统中移除车辆
+        
+        参数:
+            vehicle_id: 要移除的车辆ID
+            
+        返回:
+            bool: 如果车辆被移除则为True，如果未找到则为False
+        """
+        pass
+    
+    @abc.abstractmethod
+    def add_task(self, task) -> None:
+        """
+        向调度系统添加任务
+        
+        参数:
+            task: 要添加的任务
+        """
+        pass
+    
+    @abc.abstractmethod
+    def remove_task(self, task_id: str) -> bool:
+        """
+        从调度系统中移除任务
+        
+        参数:
+            task_id: 要移除的任务ID
+            
+        返回:
+            bool: 如果任务被移除则为True，如果未找到则为False
+        """
+        pass
+    
+    @abc.abstractmethod
+    def assign_task(self, task_id: str, vehicle_id: str) -> bool:
+        """
+        手动将任务分配给车辆
+        
+        参数:
+            task_id: 任务ID
+            vehicle_id: 车辆ID
+            
+        返回:
+            bool: 如果分配成功则为True
+            
+        异常:
+            TaskNotFoundError: 如果任务未找到
+            VehicleNotFoundError: 如果车辆未找到
+        """
+        pass
+    
+    @abc.abstractmethod
+    def get_assignments(self) -> Dict[str, List[str]]:
+        """
+        获取当前任务分配
+        
+        返回:
+            Dict[str, List[str]]: 车辆ID到任务ID列表的映射
+        """
+        pass
+    
+    @abc.abstractmethod
+    def dispatch_cycle(self) -> None:
+        """
+        执行调度周期
+        
+        这是执行任务分配和协调车辆移动的主要方法
+        """
+        pass
+    
+    @abc.abstractmethod
+    def start(self) -> None:
+        """
+        启动调度器
+        
+        根据调度间隔开始连续调度
+        """
+        pass
+    
+    @abc.abstractmethod
+    def stop(self) -> None:
+        """
+        停止调度器
+        
+        停止连续调度
+        """
+        pass
+    
+    @property
+    def status(self) -> DispatchStatus:
+        """获取调度器的当前状态"""
+        # 实现代码...
+    
+    def add_event_listener(self, event_type: EventType, listener: EventListener) -> None:
+        """
+        添加事件监听器
+        
+        参数:
+            event_type: 要监听的事件类型
+            listener: 要添加的监听器
+        """
+        # 实现代码...
+    
+    def remove_event_listener(self, event_type: EventType, listener: EventListener) -> None:
+        """
+        移除事件监听器
+        
+        参数:
+            event_type: 事件类型
+            listener: 要移除的监听器
+        """
+        # 实现代码...
+3.2.2 MiningDispatcher (mining_dispatcher.py)
+描述: 采矿调度器实现，专用于矿场环境中的车辆协调
+pythonclass MiningDispatcher(Dispatcher):
+    """
+    采矿作业调度器
+    
+    协调采矿车辆执行诸如矿石运输、装载和卸载等任务
+    """
+    
+    def __init__(self, environment=None, config: Optional[DispatcherConfig] = None):
+        """
+        初始化采矿调度器
+        
+        参数:
+            environment: 采矿环境
+            config: 调度器配置
+        """
+        # 实现代码...
+    
+    def add_vehicle(self, vehicle) -> None:
+        """
+        向调度系统添加车辆
+        
+        参数:
+            vehicle: 要添加的车辆
+        """
+        # 实现代码...
+    
+    def remove_vehicle(self, vehicle_id: str) -> bool:
+        """
+        从调度系统中移除车辆
+        
+        参数:
+            vehicle_id: 要移除的车辆ID
+            
+        返回:
+            bool: 如果车辆被移除则为True，如果未找到则为False
+        """
+        # 实现代码...
+    
+    def add_task(self, task) -> None:
+        """
+        向调度系统添加任务
+        
+        参数:
+            task: 要添加的任务
+        """
+        # 实现代码...
+    
+    def remove_task(self, task_id: str) -> bool:
+        """
+        从调度系统中移除任务
+        
+        参数:
+            task_id: 要移除的任务ID
+            
+        返回:
+            bool: 如果任务被移除则为True，如果未找到则为False
+        """
+        # 实现代码...
+    
+    def assign_task(self, task_id: str, vehicle_id: str) -> bool:
+        """
+        手动将任务分配给车辆
+        
+        参数:
+            task_id: 任务ID
+            vehicle_id: 车辆ID
+            
+        返回:
+            bool: 如果分配成功则为True
+            
+        异常:
+            TaskNotFoundError: 如果任务未找到
+            VehicleNotFoundError: 如果车辆未找到
+        """
+        # 实现代码...
+    
+    @timed("dispatch_cycle")
+    def dispatch_cycle(self) -> None:
+        """
+        执行调度周期
+        
+        这是执行任务分配和协调车辆移动的主要方法
+        """
+        # 实现代码...
+    
+    def _update_vehicles(self) -> None:
+        """更新车辆状态和位置"""
+        # 实现代码...
+    
+    def _update_tasks(self) -> None:
+        """更新任务状态并检查完成情况"""
+        # 实现代码...
+    
+    def _allocate_tasks(self) -> None:
+        """将待处理任务分配给可用车辆"""
+        # 实现代码...
+    
+    def _plan_paths(self) -> None:
+        """为有分配任务的车辆规划路径"""
+        # 实现代码...
+    
+    def _resolve_conflicts(self) -> None:
+        """解决车辆路径之间的冲突"""
+        # 实现代码...
+    
+    def _dispatch_loop(self) -> None:
+        """连续操作的主调度循环"""
+        # 实现代码...
+3.2.3 EventDispatcher (dispatch_events.py)
+描述: 事件调度器，为调度系统提供事件处理
+pythonclass EventDispatcher:
+    """
+    向注册的监听器调度事件
+    
+    为调度器提供集中式事件处理系统
+    """
+    
+    def __init__(self):
+        """初始化事件调度器"""
+        # 实现代码...
+    
+    def add_listener(self, event_type: EventType, listener: EventListener) -> None:
+        """
+        为特定事件类型添加监听器
+        
+        参数:
+            event_type: 要监听的事件类型
+            listener: 要通知的监听器
+        """
+        # 实现代码...
+    
+    def remove_listener(self, event_type: EventType, listener: EventListener) -> None:
+        """
+        为特定事件类型移除监听器
+        
+        参数:
+            event_type: 事件类型
+            listener: 要移除的监听器
+        """
+        # 实现代码...
+    
+    def dispatch_event(self, event: DispatchEvent) -> None:
+        """
+        向所有注册的监听器调度事件
+        
+        参数:
+            event: 要调度的事件
+        """
+        # 实现代码...
+3.2.4 EventListener (dispatch_events.py)
+描述: 事件监听器接口，用于处理调度事件
+pythonclass EventListener:
+    """事件监听器接口"""
+    
+    def on_event(self, event: DispatchEvent) -> None:
+        """
+        处理调度事件
+        
+        参数:
+            event: 要处理的事件
+        """
+        pass
+3.2.5 DispatchEvent (dispatch_events.py)
+描述: 调度事件基类，所有调度事件的基础
+python@dataclass
+class DispatchEvent:
+    """所有调度事件的基类"""
+    event_type: EventType
+    timestamp: datetime = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """将事件转换为字典表示"""
+        # 实现代码...
+3.2.6 VehicleEvent (dispatch_events.py)
+描述: 与车辆相关的事件
+python@dataclass
+class VehicleEvent(DispatchEvent):
+    """与车辆相关的事件"""
+    vehicle_id: str = None 
+    details: Optional[Dict[str, Any]] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """将事件转换为字典表示"""
+        # 实现代码...
+3.2.7 TaskEvent (dispatch_events.py)
+描述: 与任务相关的事件
+python@dataclass
+class TaskEvent(DispatchEvent):
+    """与任务相关的事件"""
+    task_id: str = None 
+    details: Optional[Dict[str, Any]] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """将事件转换为字典表示"""
+        # 实现代码...
+3.2.8 DispatcherConfig (base.py)
+描述: 调度器配置类
+pythonclass DispatcherConfig:
+    """调度器配置"""
+    
+    def __init__(self, 
+                 dispatch_interval: float = 1.0,
+                 dispatch_strategy: DispatchStrategy = DispatchStrategy.OPTIMIZED,
+                 max_tasks_per_vehicle: int = 5,
+                 replan_on_change: bool = True,
+                 conflict_resolution_enabled: bool = True,
+                 **kwargs):
+        """
+        初始化调度器配置
+        
+        参数:
+            dispatch_interval: 调度周期之间的时间间隔(秒)
+            dispatch_strategy: 用于调度的策略
+            max_tasks_per_vehicle: 每车最大任务数
+            replan_on_change: 环境变化时是否重新规划
+            conflict_resolution_enabled: 是否启用冲突解决
+            **kwargs: 额外配置参数
+        """
+        # 实现代码...
+3.3 simulation 模块
+3.3.1 SimulationClock (simulation_clock.py)
+描述: 模拟时钟，为模拟提供时间管理功能
+pythonclass SimulationClock:
+    """
+    管理模拟中的时间的时钟
+    
+    提供以各种模式推进时间、调度事件和同步模拟组件的功能
+    """
+    
+    def __init__(self, 
+                initial_time: Optional[datetime] = None,
+                speed_factor: float = 1.0,
+                update_mode: TimeUpdateMode = TimeUpdateMode.SCALED_TIME,
+                update_interval: float = 0.1):
+        """
+        初始化模拟时钟
+        
+        参数:
+            initial_time: 初始模拟时间(默认: 当前时间)
+            speed_factor: 比真实时间快/慢多少倍(默认: 1.0)
+            update_mode: 推进模拟时间的模式
+            update_interval: 更新之间的时间间隔(秒，真实时间)
+        """
+        # 实现代码...
+    
+    @property
+    def current_time(self) -> datetime:
+        """获取当前模拟时间"""
+        # 实现代码...
+    
+    @property
+    def elapsed_time(self) -> timedelta:
+        """获取自开始以来的模拟时间"""
+        # 实现代码...
+    
+    def start(self) -> None:
+        """
+        启动模拟时钟
+        
+        按照更新模式开始推进模拟时间
+        """
+        # 实现代码...
+    
+    def stop(self) -> None:
+        """
+        停止模拟时钟
+        
+        停止推进模拟时间并重置为初始时间
+        """
+        # 实现代码...
+    
+    def pause(self) -> None:
+        """
+        暂停模拟时钟
+        
+        暂时停止推进模拟时间但保留当前时间
+        """
+        # 实现代码...
+    
+    def set_time(self, new_time: datetime) -> None:
+        """
+        设置模拟时间
+        
+        参数:
+            new_time: 新的模拟时间
+        """
+        # 实现代码...
+    
+    def advance(self, delta: timedelta) -> None:
+        """
+        将模拟时间推进指定量
+        
+        参数:
+            delta: 要推进的时间
+        """
+        # 实现代码...
+    
+    def schedule_event(self, delay: float, callback: Callable, data: Any = None) -> int:
+        """
+        安排事件在延迟后发生
+        
+        参数:
+            delay: 模拟秒数延迟
+            callback: 事件发生时调用的函数
+            data: 传递给回调的可选数据
+            
+        返回:
+            int: 用于取消的事件ID
+        """
+        # 实现代码...
+    
+    def add_time_listener(self, listener: Callable[[datetime], None]) -> None:
+        """
+        添加时间更新通知的监听器
+        
+        参数:
+            listener: 使用当前时间调用的函数
+        """
+        # 实现代码...
+3.3.2 Simulator (simulator.py)
+描述: 矿业调度系统的模拟器，用于测试和评估调度系统
+pythonclass Simulator(Serializable):
+    """
+    矿业调度系统的模拟器
+    
+    模拟带有车辆和任务的矿业环境，以评估调度系统的性能
+    """
+    
+    def __init__(self, 
+                environment=None,
+                dispatcher=None,
+                config: Optional[SimulationConfig] = None):
+        """
+        初始化模拟器
+        
+        参数:
+            environment: 矿业环境
+            dispatcher: 调度器实例
+            config: 模拟配置
+        """
+        # 实现代码...
+    
+    @property
+    def status(self) -> SimulationStatus:
+        """获取当前模拟状态"""
+        # 实现代码...
+    
+    def setup(self) -> None:
+        """
+        设置模拟环境
+        
+        创建环境、车辆和初始任务
+        """
+        # 实现代码...
+    
+    def start(self) -> None:
+        """
+        启动模拟
+        
+        开始执行模拟循环并推进时间
+        """
+        # 实现代码...
+    
+    def stop(self) -> None:
+        """
+        停止模拟
+        
+        停止执行模拟并重置状态
+        """
+        # 实现代码...
+    
+    def pause(self) -> None:
+        """
+        暂停模拟
+        
+        暂时停止模拟执行
+        """
+        # 实现代码...
+    
+    def resume(self) -> None:
+        """
+        恢复模拟
+        
+        继续执行已暂停的模拟
+        """
+        # 实现代码...
+    
+    def step(self, time_step: float = 1.0) -> None:
+        """
+        将模拟推进单个时间步
+        
+        参数:
+            time_step: 要推进的时间(秒)
+        """
+        # 实现代码...
+    
+    def run_until(self, end_time: datetime) -> None:
+        """
+        运行模拟直到特定时间
+        
+        参数:
+            end_time: 运行至此时间
+        """
+        # 实现代码...
+    
+    def run_for(self, duration: timedelta) -> None:
+        """
+        运行模拟指定的持续时间
+        
+        参数:
+            duration: 要运行的持续时间
+        """
+        # 实现代码...
+    
+    def get_metrics(self) -> SimulationMetrics:
+        """
+        获取当前模拟指标
+        
+        返回:
+            SimulationMetrics: 当前指标
+        """
+        # 实现代码...
+3.3.3 SimulationConfig (simulator.py)
+描述: 模拟配置，定义模拟参数
+pythonclass SimulationConfig:
+    """模拟配置"""
+    
+    def __init__(self, 
+                 duration: Optional[timedelta] = None,
+                 seed: Optional[int] = None,
+                 log_level: str = "INFO",
+                 real_time_factor: float = 10.0,
+                 task_generation_rate: float = 1.0,
+                 vehicle_count: int = 5,
+                 environment_size: Tuple[int, int] = (1000, 1000),
+                 **kwargs):
+        """
+        初始化模拟配置
+        
+        参数:
+            duration: 模拟总持续时间(None表示无限制)
+            seed: 随机种子，用于可重现性
+            log_level: 日志级别
+            real_time_factor: 比真实时间快多少倍
+            task_generation_rate: 每分钟任务数
+            vehicle_count: 要模拟的车辆数
+            environment_size: 环境大小(宽度, 高度)
+            **kwargs: 额外配置参数
+        """
+        # 实现代码...
+3.3.4 SimulationMetrics (simulator.py)
+描述: 模拟期间收集的指标
+python@dataclass
+class SimulationMetrics:
+    """模拟期间收集的指标"""
+    
+    # 基本统计信息
+    total_vehicles: int = 0
+    total_tasks: int = 0
+    completed_tasks: int = 0
+    failed_tasks: int = 0
+    
+    # 时间指标
+    total_simulation_time: float = 0.0  # 秒
+    total_vehicle_travel_time: float = 0.0  # 秒
+    total_vehicle_idle_time: float = 0.0  # 秒
+    total_task_waiting_time: float = 0.0  # 秒
+    total_task_execution_time: float = 0.0  # 秒
+    
+    # 距离指标
+    total_distance_traveled: float = 0.0  # 米
+    
+    # 效率指标
+    throughput: float = 0.0  # 每小时任务数
+    average_task_completion_time: float = 0.0  # 秒
+    average_task_waiting_time: float = 0.0  # 秒
+    
+    # 资源利用率
+    average_vehicle_utilization: float = 0.0  # 百分比
+    
+    # 额外指标
+    metrics_by_vehicle: Dict[str, Dict[str, float]] = None
+    metrics_by_task_type: Dict[str, Dict[str, float]] = None
+    
+    def update_efficiency_metrics(self) -> None:
+        """更新导出的效率指标"""
+        # 实现代码...
+3.3.5 ScheduledEvent (simulation_clock.py)
+描述: 计划在特定模拟时间执行的事件
+pythonclass ScheduledEvent:
+    """计划在特定模拟时间执行的事件"""
+    
+    def __init__(self, sim_time: float, event_id: int, callback: Callable, data: Any = None):
+        """
+        初始化计划事件
+        
+        参数:
+            sim_time: 事件应执行的模拟时间
+            event_id: 此事件的唯一标识符
+            callback: 事件执行时调用的函数
+            data: 传递给回调的可选数据
+        """
+        # 实现代码...
+    
+    def __lt__(self, other):
+        """比较事件以进行优先队列排序"""
+        # 实现代码...
+3.3.6 SimulationEventListener (simulator.py)
+描述: 从调度事件收集指标的事件监听器
+pythonclass SimulationEventListener(EventListener):
+    """从调度事件收集指标的事件监听器"""
+    
+    def __init__(self, simulator):
+        """
+        初始化事件监听器
+        
+        参数:
+            simulator: 模拟器实例
+        """
+        # 实现代码...
+    
+    def on_event(self, event: DispatchEvent) -> None:
+        """
+        处理调度事件
+        
+        参数:
+            event: 要处理的事件
+        """
+        # 实现代码...
+[其他核心数据类型...]
+
+### B. 枚举类型
+
+class VehicleState(Enum):
+    """车辆状态枚举"""
+    IDLE = auto()             # 车辆未分配任何任务
+    PREPARING = auto()        # 车辆正在准备任务(装载等)
+    EN_ROUTE = auto()         # 车辆正在移动到目的地
+    LOADING = auto()          # 车辆正在被装载
+    UNLOADING = auto()        # 车辆正在被卸载
+    WAITING = auto()          # 车辆正在等待(如在交叉路口)
+    EMERGENCY_STOP = auto()   # 车辆因紧急情况停止
+    MAINTENANCE = auto()      # 车辆正在进行维护
+    OUT_OF_SERVICE = auto()   # 车辆停止服务
+    CHARGING = auto()         # 车辆正在充电(电动车辆)
+    FAULT = auto()            # 车辆有故障状态
+pythonclass TransportStage(Enum):
+    """车辆运输阶段枚举"""
+    NONE = auto()              # 不在运输操作中
+    APPROACHING = auto()       # 接近装载点
+    LOADING = auto()           # 在装载点，正在装载
+    TRANSPORTING = auto()      # 运输货物到目的地
+    UNLOADING = auto()         # 在目的地，正在卸载
+    RETURNING = auto()         # 返回基地/空闲位置
+
+class TaskStatus(Enum):
+    """任务状态枚举"""
+    PENDING = auto()      # 任务等待分配
+    ASSIGNED = auto()     # 任务已分配但未开始
+    IN_PROGRESS = auto()  # 任务正在进行中
+    COMPLETED = auto()    # 任务成功完成
+    FAILED = auto()       # 任务失败
+    CANCELED = auto()     # 任务被取消
+    BLOCKED = auto()      # 任务被依赖项或约束阻塞
+    PAUSED = auto()       # 任务被暂停
+pythonclass TaskPriority(Enum):
+    """任务优先级枚举"""
+    LOW = 1
+    NORMAL = 3
+    HIGH = 5
+    URGENT = 8
+    CRITICAL = 10
+pythonclass TaskType(Enum):
+    """任务类型枚举"""
+    TRANSPORT = auto()    # 将材料从一个位置移动到另一个位置
+    LOADING = auto()      # 将材料装载到车辆上
+    UNLOADING = auto()    # 从车辆上卸载材料
+    EXCAVATION = auto()   # 从地面挖掘材料
+    DRILLING = auto()     # 进行爆破或取样钻探
+    MAINTENANCE = auto()  # 车辆或设备维护
+    REFUELING = auto()    # 车辆加油
+    INSPECTION = auto()   # 检查设备或区域
+    SURVEYING = auto()    # 测量区域
+    CLEANUP = auto()      # 清理区域
+
+class ZoneType(Enum):
+    """采矿环境中操作区域的类型枚举"""
+    LOADING = auto()      # 材料装载区域
+    UNLOADING = auto()    # 材料卸载区域
+    PARKING = auto()      # 车辆停放/存放区域
+    CHARGING = auto()     # 电动车辆充电区域
+    MAINTENANCE = auto()  # 车辆维护区域
+    EXCAVATION = auto()   # 活动挖掘区域
+    DRILLING = auto()     # 钻孔作业区域
+    BLASTING = auto()     # 准备爆破的区域
+    RESTRICTED = auto()   # 限制进入区域
+    TRANSIT = auto()      # 高流量过境走廊
+
+
+class PlannerType(Enum):
+    """路径规划器类型枚举"""
+    HYBRID_ASTAR = auto()       # 混合A*算法
+    REEDS_SHEPP = auto()        # Reeds-Shepp曲线
+    RRT = auto()                # 快速探索随机树
+    RRT_STAR = auto()           # RRT*（优化的RRT）
+    STATE_LATTICE = auto()      # 状态栅格规划器
+    DUBINS = auto()             # Dubins曲线
+pythonclass PlanningStatus(Enum):
+    """规划结果状态代码"""
+    SUCCESS = auto()           # 规划成功完成
+    FAILURE = auto()           # 规划失败
+    TIMEOUT = auto()           # 规划超时
+    START_INVALID = auto()     # 起始位置无效
+    GOAL_INVALID = auto()      # 目标位置无效
+    NO_SOLUTION = auto()       # 不存在解决方案
+    PARTIAL_SOLUTION = auto()  # 仅找到部分解决方案
+pythonclass MotionType(Enum):
+    """车辆运动类型"""
+    FORWARD = auto()       # 前进
+    BACKWARD = auto()      # 后退
+    TURN_LEFT = auto()     # 左转
+    TURN_RIGHT = auto()    # 右转
+    ARC_LEFT = auto()      # 左弧
+    ARC_RIGHT = auto()     # 右弧
+    STATIONARY = auto()    # 静止
+pythonclass DrivingDirection(Enum):
+    """车辆行驶方向"""
+    FORWARD = 1            # 前进
+    BACKWARD = -1          # 后退
+pythonclass RSCurveType(Enum):
+    """Reeds-Shepp曲线段类型"""
+    STRAIGHT = auto()      # 直线段
+    LEFT = auto()          # 左转
+    RIGHT = auto()         # 右转
+class EdgeType(Enum):
+    """图边类型枚举"""
+    DIRECTED = 1    # 有向边(单向)
+    UNDIRECTED = 2  # 无向边(双向)
+pythonclass ConflictType(Enum):
+    """冲突类型枚举"""
+    VERTEX = auto()  # 节点冲突（两车同一时间在同一位置）
+    EDGE = auto()    # 边冲突（两车在同一时间段内交换位置）
+    FOLLOWING = auto()  # 跟随冲突（两车距离过近）
+    DEADLOCK = auto()   # 死锁冲突（互相阻塞）
+pythonclass ConstraintType(Enum):
+    """约束类型枚举"""
+    VERTEX = auto()  # 禁止在特定时间点访问特定位置
+    EDGE = auto()    # 禁止在特定时间段内通过特定边
+    TEMPORAL = auto() # 时间约束（延迟车辆出发时间）
+pythonclass ConflictResolverType(Enum):
+    """冲突解决器类型枚举"""
+    NONE = auto()
+    CBS = auto()  # Conflict-Based Search
+    ECBS = auto() # Enhanced Conflict-Based Search
+    PRIORITY = auto() # 基于优先级的冲突解决
+    TEMPORAL = auto() # 时间分离法
+class AllocationStrategy(Enum):
+    """任务分配策略枚举"""
+    PRIORITY = auto()     # 基于优先级的分配
+    GREEDY = auto()       # 贪心分配(最小成本/距离)
+    MIQP = auto()         # 混合整数二次规划
+    AUCTION = auto()      # 基于拍卖的分配
+    HUNGARIAN = auto()    # 匈牙利算法(最优分配)
+pythonclass AllocationStatus(Enum):
+    """分配结果状态代码"""
+    SUCCESS = auto()           # 分配成功完成
+    PARTIAL = auto()           # 只有部分任务被分配
+    FAILED = auto()            # 分配失败
+    TIMEOUT = auto()           # 分配超时
+    INFEASIBLE = auto()        # 不存在可行分配
+    NO_VEHICLES = auto()       # 没有可用车辆
+    NO_TASKS = auto()          # 没有任务需要分配
+pythonclass AllocationObjective(Enum):
+    """分配优化目标"""
+    MINIMIZE_MAKESPAN = auto()       # 最小化总完成时间
+    MINIMIZE_DISTANCE = auto()       # 最小化总行驶距离
+    MINIMIZE_ENERGY = auto()         # 最小化能源消耗
+    BALANCE_WORKLOAD = auto()        # 平衡车辆之间的工作负载
+    MAXIMIZE_THROUGHPUT = auto()     # 最大化物料吞吐量
+    MULTI_OBJECTIVE = auto()         # 多重加权目标
+class DispatchStatus(Enum):
+    """调度操作的状态"""
+    IDLE = auto()     # 空闲
+    RUNNING = auto()  # 运行中
+    PAUSED = auto()   # 暂停
+    ERROR = auto()    # 错误
+pythonclass DispatchStrategy(Enum):
+    """调度车辆到任务的策略"""
+    FIFO = auto()       # 先进先出
+    PRIORITY = auto()   # 基于任务优先级
+    NEAREST = auto()    # 离任务最近的车辆
+    BALANCED = auto()   # 平衡车辆负载
+    OPTIMIZED = auto()  # 全局优化解决方案
+pythonclass EventType(Enum):
+    """调度系统中的事件类型"""
+    ALL = auto()                  # 所有事件
+    
+    # 车辆事件
+    VEHICLE_ADDED = auto()        # 车辆添加
+    VEHICLE_REMOVED = auto()      # 车辆移除
+    VEHICLE_STATE_CHANGED = auto() # 车辆状态变化
+    VEHICLE_POSITION_CHANGED = auto() # 车辆位置变化
+    
+    # 任务事件
+    TASK_ADDED = auto()          # 任务添加
+    TASK_ASSIGNED = auto()       # 任务分配
+    TASK_STARTED = auto()        # 任务开始
+    TASK_COMPLETED = auto()      # 任务完成
+    TASK_FAILED = auto()         # 任务失败
+    TASK_CANCELED = auto()       # 任务取消
+    
+    # 调度事件
+    DISPATCH_CYCLE_STARTED = auto()   # 调度周期开始
+    DISPATCH_CYCLE_COMPLETED = auto() # 调度周期完成
+    DISPATCH_DECISION_MADE = auto()   # 调度决策制定
+    
+    # 路径事件
+    PATH_PLANNED = auto()        # 路径规划
+    PATH_REPLANNED = auto()      # 路径重新规划
+    
+    # 冲突事件
+    CONFLICT_DETECTED = auto()   # 冲突检测
+    CONFLICT_RESOLVED = auto()   # 冲突解决
+    
+    # 系统事件
+    SYSTEM_ERROR = auto()        # 系统错误
+    SYSTEM_WARNING = auto()      # 系统警告
+    SYSTEM_INFO = auto()         # 系统信息
+ass ClockStatus(Enum):
+    """模拟时钟的状态"""
+    STOPPED = auto()  # 已停止
+    RUNNING = auto()  # 运行中
+    PAUSED = auto()   # 已暂停
+pythonclass TimeUpdateMode(Enum):
+    """更新模拟时间的模式"""
+    REAL_TIME = auto()      # 模拟时间随真实时间推进
+    SCALED_TIME = auto()    # 模拟时间比真实时间推进得更快/更慢
+    STEPPED = auto()        # 模拟时间以离散步长推进
+    EVENT_BASED = auto()    # 模拟时间推进到下一个计划事件
+pythonclass SimulationStatus(Enum):
+    """模拟的状态"""
+    STOPPED = auto()    # 已停止
+    RUNNING = auto()    # 运行中
+    PAUSED = auto()     # 已暂停
+    COMPLETED = auto()  # 已完成
+    ERROR = auto()      # 错误
+[其他枚举类型...]
+
+### C. 错误和异常
+
+class VehicleStateError(Exception):
+    """状态转换错误异常"""
+    pass
+
+class MiningVehicleError(Exception):
+    """矿用车辆错误基类"""
+    pass
+
+class TaskAssignmentError(MiningVehicleError):
+    """任务分配错误异常"""
+    pass
+
+class TaskError(Exception):
+    """任务错误基类"""
+    pass
+
+class TaskStateError(TaskError):
+    """任务状态转换错误异常"""
+    pass
+
+class TaskAssignmentError(TaskError):
+    """任务分配错误异常"""
+    pass
+
+class TaskStatusTransitionError(Exception):
+    """任务状态转换错误异常"""
+    pass
+
+class TransportTaskError(TaskError):
+    """运输任务错误异常"""
+    pass
+
+class EnvironmentError(Exception):
+    """环境错误基类"""
+    pass
+
+class PathPlanningError(Exception):
+    """路径规划错误基类"""
+    pass
+pythonclass PlannerNotFoundError(PathPlanningError):
+    """请求的规划器类型未找到时抛出"""
+    pass
+pythonclass NoPathFoundError(PathPlanningError):
+    """无法找到从起点到终点的路径时抛出"""
+    pass
+pythonclass PlanningTimeoutError(PathPlanningError):
+    """路径规划操作超时时抛出"""
+    pass
+pythonclass InvalidStartError(PathPlanningError):
+    """起始位置无效时抛出"""
+    pass
+pythonclass InvalidGoalError(PathPlanningError):
+    """目标位置无效时抛出"""
+    passRetry
+class GraphError(Exception):
+    """图操作错误基类"""
+    pass
+pythonclass NodeNotFoundError(GraphError):
+    """尝试访问不存在的节点时抛出"""
+    pass
+pythonclass EdgeNotFoundError(GraphError):
+    """尝试访问不存在的边时抛出"""
+    pass
+pythonclass ConflictResolutionError(Exception):
+    """冲突解决错误基类"""
+    pass
+pythonclass NoResolverFoundError(ConflictResolutionError):
+    """没有找到适合的冲突解决器时抛出"""
+    pass
+pythonclass ResolutionTimeoutError(ConflictResolutionError):
+    """冲突解决超时时抛出"""
+    pass
+class AllocationError(Exception):
+    """任务分配错误基类"""
+    pass
+pythonclass InvalidConfigError(AllocationError):
+    """配置无效时抛出"""
+    pass
+pythonclass SolverNotAvailableError(AllocationError):
+    """所需求解器不可用时抛出"""
+    pass
+pythonclass OptimizationError(AllocationError):
+    """优化过程中发生错误时抛出"""
+    pass
+pythonclass AllocationTimeoutError(AllocationError):
+    """分配操作超时时抛出"""
+    pass
+class DispatchError(Exception):
+    """调度系统错误的基类"""
+    pass
+pythonclass VehicleNotFoundError(DispatchError):
+    """当车辆未找到时抛出的错误"""
+    pass
+pythonclass TaskNotFoundError(DispatchError):
+    """当任务未找到时抛出的错误"""
+    pass
+pythonclass DispatchInitializationError(DispatchError):
+    """调度器初始化失败时抛出"""
+    pass
+pythonclass DispatchCycleError(DispatchError):
+    """调度周期执行错误时抛出"""
+    pass
+pythonclass InvalidAssignmentError(DispatchError):
+    """任务分配无效时抛出"""
+    passRetry
+class SimulationError(Exception):
+    """模拟错误的基类"""
+    pass
+pythonclass TimeError(SimulationError):
+    """与时间操作相关的错误"""
+    pass
+pythonclass InvalidSimulationStateError(SimulationError):
+    """在无效状态下尝试操作时抛出"""
+    pass
+pythonclass ConfigurationError(SimulationError):
+    """配置无效时抛出"""
+    pass
+pythonclass EnvironmentCreationError(SimulationError):
+    """创建环境失败时抛出"""
+    pass[其他自定义异常...]
