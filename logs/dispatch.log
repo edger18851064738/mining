@@ -12,3 +12,176 @@
 2025-05-09 14:31:42 - INFO - system - Logging system initialized
 2025-05-09 14:31:46 - INFO - system - Logging system initialized
 2025-05-09 14:31:52 - INFO - system - Logging system initialized
+2025-05-09 14:51:22 - INFO - system - Logging system initialized
+2025-05-09 14:52:21 - INFO - system - Logging system initialized
+2025-05-09 14:52:27 - INFO - system - Logging system initialized
+2025-05-09 14:52:28 - INFO - main - Setting up mining environment
+2025-05-09 14:52:28 - INFO - mining_environment - Mining environment 'Mining Site Alpha' initialized with 40x40 grid
+2025-05-09 14:52:28 - WARNING - mining_environment - Noise module not available. Using simplified terrain generation.
+2025-05-09 14:52:28 - INFO - main - Created mining environment of size 200x200
+2025-05-09 14:52:28 - INFO - main - Creating mining vehicles
+2025-05-09 14:52:28 - INFO - main - Created 5 vehicles: 3 trucks, 1 excavators, 1 support
+2025-05-09 14:52:28 - INFO - main - Creating initial tasks
+2025-05-09 14:52:28 - INFO - main - Created 5 initial tasks
+2025-05-09 14:52:28 - INFO - main - Setting up mining dispatcher
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Using optimized (MIQP) task allocator
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Conflict resolution enabled (CBS)
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Mining dispatcher initialized
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Using optimized (MIQP) task allocator
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Added vehicle TRUCK-001
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Added vehicle TRUCK-002
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Added vehicle TRUCK-003
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Added vehicle EXCV-001
+2025-05-09 14:52:28 - INFO - MiningDispatcher - Added vehicle SUPP-001
+2025-05-09 14:52:28 - ERROR - main - Error in main: 'str' object has no attribute 'name'
+Traceback (most recent call last):
+  File "e:\system\miningcbs\main.py", line 507, in main
+    dispatcher = setup_dispatcher(environment, vehicles, tasks)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "e:\system\miningcbs\main.py", line 215, in setup_dispatcher
+    dispatcher.add_task(task)
+  File "e:\system\miningcbs\coordination\dispatcher\mining_dispatcher.py", line 249, in add_task
+    details={"status": task.status.name, "priority": task.priority.name}
+                       ^^^^^^^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'name'
+2025-05-09 14:56:45 - INFO - system - Logging system initialized
+2025-05-09 14:56:50 - INFO - system - Logging system initialized
+2025-05-09 14:56:51 - INFO - main - Setting up mining environment
+2025-05-09 14:56:51 - INFO - mining_environment - Mining environment 'Mining Site Alpha' initialized with 40x40 grid
+2025-05-09 14:56:51 - WARNING - mining_environment - Noise module not available. Using simplified terrain generation.
+2025-05-09 14:56:51 - INFO - main - Created mining environment of size 200x200
+2025-05-09 14:56:51 - INFO - main - Creating mining vehicles
+2025-05-09 14:56:51 - INFO - main - Created 5 vehicles: 3 trucks, 1 excavators, 1 support
+2025-05-09 14:56:51 - INFO - main - Creating initial tasks
+2025-05-09 14:56:51 - INFO - main - Created 5 initial tasks
+2025-05-09 14:56:51 - INFO - main - Setting up mining dispatcher
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Using optimized (MIQP) task allocator
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Conflict resolution enabled (CBS)
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Mining dispatcher initialized
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Using optimized (MIQP) task allocator
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Added vehicle TRUCK-001
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Added vehicle TRUCK-002
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Added vehicle TRUCK-003
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Added vehicle EXCV-001
+2025-05-09 14:56:51 - INFO - MiningDispatcher - Added vehicle SUPP-001
+2025-05-09 14:56:51 - ERROR - main - Error in main: 'int' object has no attribute 'name'
+Traceback (most recent call last):
+  File "e:\system\miningcbs\main.py", line 507, in main
+    dispatcher = setup_dispatcher(environment, vehicles, tasks)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "e:\system\miningcbs\main.py", line 215, in setup_dispatcher
+    dispatcher.add_task(task)
+  File "e:\system\miningcbs\coordination\dispatcher\mining_dispatcher.py", line 252, in add_task
+    self.logger.info(f"Added task {task_id} with priority {task.priority.name}")
+                                                           ^^^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'name'
+2025-05-09 14:57:53 - INFO - system - Logging system initialized
+2025-05-09 14:58:02 - INFO - system - Logging system initialized
+2025-05-09 14:58:02 - INFO - main - Setting up mining environment
+2025-05-09 14:58:02 - INFO - mining_environment - Mining environment 'Mining Site Alpha' initialized with 40x40 grid
+2025-05-09 14:58:02 - WARNING - mining_environment - Noise module not available. Using simplified terrain generation.
+2025-05-09 14:58:02 - INFO - main - Created mining environment of size 200x200
+2025-05-09 14:58:02 - INFO - main - Creating mining vehicles
+2025-05-09 14:58:02 - INFO - main - Created 5 vehicles: 3 trucks, 1 excavators, 1 support
+2025-05-09 14:58:02 - INFO - main - Creating initial tasks
+2025-05-09 14:58:02 - INFO - main - Created 5 initial tasks
+2025-05-09 14:58:02 - INFO - main - Setting up mining dispatcher
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Using optimized (MIQP) task allocator
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Conflict resolution enabled (CBS)
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Mining dispatcher initialized
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Using optimized (MIQP) task allocator
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added vehicle TRUCK-001
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added vehicle TRUCK-002
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added vehicle TRUCK-003
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added vehicle EXCV-001
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added vehicle SUPP-001
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added task TASK-001 with priority 5
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added task TASK-002 with priority 3
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added task TASK-003 with priority 10
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added task TASK-004 with priority 3
+2025-05-09 14:58:02 - INFO - MiningDispatcher - Added task TASK-005 with priority 10
+2025-05-09 14:58:02 - INFO - main - Mining dispatcher initialized
+2025-05-09 14:58:02 - INFO - main - Setting up simulator
+2025-05-09 14:58:02 - INFO - Simulator - Simulator initialized
+2025-05-09 14:58:02 - INFO - main - Simulator initialized
+2025-05-09 14:58:33 - ERROR - main - Error in main: name 'SimulationStatus' is not defined
+Traceback (most recent call last):
+  File "e:\system\miningcbs\main.py", line 513, in main
+    run_simulation_menu(environment, dispatcher, simulator)
+  File "e:\system\miningcbs\main.py", line 363, in run_simulation_menu
+    if simulator.status == SimulationStatus.STOPPED:
+                           ^^^^^^^^^^^^^^^^
+NameError: name 'SimulationStatus' is not defined
+2025-05-09 15:00:14 - INFO - system - Logging system initialized
+2025-05-09 15:00:14 - INFO - main - Setting up mining environment
+2025-05-09 15:00:14 - INFO - mining_environment - Mining environment 'Mining Site Alpha' initialized with 40x40 grid
+2025-05-09 15:00:14 - WARNING - mining_environment - Noise module not available. Using simplified terrain generation.
+2025-05-09 15:00:14 - INFO - main - Created mining environment of size 200x200
+2025-05-09 15:00:14 - INFO - main - Creating mining vehicles
+2025-05-09 15:00:14 - INFO - main - Created 5 vehicles: 3 trucks, 1 excavators, 1 support
+2025-05-09 15:00:14 - INFO - main - Creating initial tasks
+2025-05-09 15:00:14 - INFO - main - Created 5 initial tasks
+2025-05-09 15:00:14 - INFO - main - Setting up mining dispatcher
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Using optimized (MIQP) task allocator
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Conflict resolution enabled (CBS)
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Mining dispatcher initialized
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Using optimized (MIQP) task allocator
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added vehicle TRUCK-001
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added vehicle TRUCK-002
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added vehicle TRUCK-003
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added vehicle EXCV-001
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added vehicle SUPP-001
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added task TASK-001 with priority 3
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added task TASK-002 with priority 8
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added task TASK-003 with priority 8
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added task TASK-004 with priority 1
+2025-05-09 15:00:14 - INFO - MiningDispatcher - Added task TASK-005 with priority 5
+2025-05-09 15:00:14 - INFO - main - Mining dispatcher initialized
+2025-05-09 15:00:14 - INFO - main - Setting up simulator
+2025-05-09 15:00:14 - INFO - Simulator - Simulator initialized
+2025-05-09 15:00:14 - INFO - main - Simulator initialized
+2025-05-09 15:00:16 - INFO - Simulator - Creating 5 vehicles
+2025-05-09 15:00:16 - INFO - Simulator - Created 5 vehicles
+2025-05-09 15:00:16 - INFO - Simulator - Creating initial tasks
+2025-05-09 15:00:16 - INFO - Simulator - Initial tasks created
+2025-05-09 15:00:16 - INFO - Simulator - Simulation setup complete
+2025-05-09 15:00:16 - INFO - SimulationClock - Clock started at 2025-05-09 15:00:14.976540
+2025-05-09 15:00:16 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:16 - INFO - MiningDispatcher - Dispatcher started
+2025-05-09 15:00:16 - INFO - Simulator - Simulation started
+2025-05-09 15:00:17 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:18 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:19 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:20 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:21 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:22 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:23 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:24 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:25 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:26 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:27 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:28 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:29 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:30 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:31 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:32 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:33 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:34 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:35 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:36 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:37 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:38 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:39 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:40 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:41 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:42 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:43 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:44 - INFO - MiningDispatcher - Dispatch cycle completed in 0.000 seconds
+2025-05-09 15:00:45 - ERROR - main - Error in main: 
+Traceback (most recent call last):
+  File "e:\system\miningcbs\main.py", line 513, in main
+    run_simulation_menu(environment, dispatcher, simulator)
+  File "e:\system\miningcbs\main.py", line 359, in run_simulation_menu
+    choice = input("\nEnter choice: ")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+EOFError

@@ -246,10 +246,10 @@ class MiningDispatcher(Dispatcher):
         self.dispatch_event(TaskEvent(
             event_type=EventType.TASK_ADDED,
             task_id=task_id,
-            details={"status": task.status.name, "priority": task.priority.name}
+            details={"status": task.status, "priority": str(task.priority)}
         ))
         
-        self.logger.info(f"Added task {task_id} with priority {task.priority.name}")
+        self.logger.info(f"Added task {task_id} with priority {task.priority}")
     
     def remove_task(self, task_id: str) -> bool:
         """

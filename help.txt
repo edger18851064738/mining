@@ -1783,3 +1783,1047 @@ _schedule_task_generation() -> None
 _generate_task() -> None
 _update_metrics() -> None
 _finalize_metrics() -> None
+
+露天矿多车协同调度系统 - 代码模块整理
+1. algorithms/conflict 模块
+cbs.py
+外部库导入:
+pythonimport heapq
+import time
+from typing import Dict, List, Set, Tuple, Optional, Any, Union, Callable
+from dataclasses import dataclass, field
+import copy
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path
+from utils.logger import get_logger, timed
+from algorithms.planning.common import (
+    PlanningStatus, PlanningResult, PlanningConfig, PlanningConstraints
+)
+from algorithms.conflict.common import (
+    Conflict, Constraint, PathWithTimesteps, CBSNode, 
+    ConflictType, ConstraintType, detect_conflicts, 
+    create_constraints_from_conflict, path_to_timesteps, timesteps_to_path
+)
+from algorithms.conflict.interfaces import ConflictResolver
+类和数据结构:
+@dataclass CBSConfig: CBS算法配置
+
+max_iterations: int = 1000
+max_runtime: float = 10.0
+vehicle_radius: float = 1.0
+time_horizon: int = 100
+default_speed: float = 1.0
+max_constraints: int = 100
+use_cardinal_conflicts: bool = True
+use_disjoint_splitting: bool = True
+use_bypass: bool = True
+use_priority_inheritance: bool = True
+
+CBSResolver(ConflictResolver): 基于冲突的搜索(CBS)算法实现
+
+方法:
+
+init(self, config: Optional[CBSConfig] = None)
+@timed("cbs_find_conflicts") find_conflicts(self, paths: Dict[str, Path], vehicles: Dict[str, Any] = None) -> List[Conflict]
+@timed("cbs_resolve_conflicts") resolve_conflicts(self, paths: Dict[str, Path], path_planner: Any, vehicles: Dict[str, Any] = None, obstacles: List[Any] = None) -> Dict[str, Path]
+_create_root_node(self, paths: Dict[str, Path], vehicles: Dict[str, Any] = None) -> CBSNode
+_create_child_node(self, parent: CBSNode, constraint: Constraint) -> Optional[CBSNode]
+_convert_to_planning_constraints(self, constraints: List[Constraint], start_point: Point2D, start_time: int) -> PlanningConstraints
+_select_conflict(self, conflicts: List[Conflict]) -> Conflict
+_node_to_paths(self, node: CBSNode) -> Dict[str, Path]
+_compute_node_hash(self, node: CBSNode) -> int
+
+
+
+common.py
+外部库导入:
+pythonimport math
+from enum import Enum, auto
+from typing import List, Dict, Tuple, Set, Optional, Any, Union
+from dataclasses import dataclass, field
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path
+from utils.logger import get_logger
+枚举类:
+ConflictType(Enum): 冲突类型枚举
+
+VERTEX = auto()
+EDGE = auto()
+FOLLOWING = auto()
+DEADLOCK = auto()
+
+ConstraintType(Enum): 约束类型枚举
+
+VERTEX = auto()
+EDGE = auto()
+TEMPORAL = auto()
+
+数据类:
+@dataclass Conflict: 冲突数据结构
+
+conflict_type: ConflictType
+vehicle_a_id: str
+vehicle_b_id: str
+location_a: Point2D
+location_b: Point2D
+time_step: int
+prev_location_a: Optional[Point2D] = None
+prev_location_b: Optional[Point2D] = None
+metadata: Dict[str, Any] = field(default_factory=dict)
+方法:
+
+repr(self) -> str
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass Constraint: 约束数据结构
+
+constraint_type: ConstraintType
+vehicle_id: str
+location: Point2D
+time_step: int
+target_location: Optional[Point2D] = None
+metadata: Dict[str, Any] = field(default_factory=dict)
+方法:
+
+hash(self)
+eq(self, other)
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass PathWithTimesteps: 带时间步的路径
+
+vehicle_id: str
+points: List[Point2D]
+timesteps: List[int]
+方法:
+
+post_init(self)
+position_at_time(self, timestep: int) -> Optional[Point2D]
+get_timestep_range(self) -> Tuple[int, int]
+violates_constraint(self, constraint: Constraint) -> bool
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass CBSNode: CBS搜索树节点
+
+constraints: Set[Constraint] = field(default_factory=set)
+paths: Dict[str, PathWithTimesteps] = field(default_factory=dict)
+cost: float = 0.0
+conflicts: List[Conflict] = field(default_factory=list)
+parent: Optional['CBSNode'] = None
+方法:
+
+post_init(self)
+update_cost(self)
+add_constraint(self, constraint: Constraint)
+get_constraints_for_vehicle(self, vehicle_id: str) -> List[Constraint]
+is_solution(self) -> bool
+lt(self, other)
+
+
+
+模块函数:
+
+detect_conflicts(paths: Dict[str, PathWithTimesteps], vehicle_radius: float = 1.0, time_horizon: int = 100) -> List[Conflict]
+create_constraints_from_conflict(conflict: Conflict) -> Tuple[Constraint, Constraint]
+path_to_timesteps(path: Path, speed: float = 1.0, start_time: int = 0) -> PathWithTimesteps
+timesteps_to_path(path_with_timesteps: PathWithTimesteps) -> Path
+
+interfaces.py
+外部库导入:
+pythonimport abc
+from enum import Enum, auto
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
+内部模块导入:
+pythonfrom utils.math.trajectories import Path
+from utils.logger import get_logger
+枚举类:
+ConflictResolverType(Enum): 冲突解决器类型枚举
+
+NONE = auto()
+CBS = auto()
+ECBS = auto()
+PRIORITY = auto()
+TEMPORAL = auto()
+
+数据类:
+@dataclass ConflictResolutionConfig: 冲突解决配置
+
+resolver_type: ConflictResolverType = ConflictResolverType.CBS
+vehicle_radius: float = 1.0
+time_horizon: int = 100
+max_runtime: float = 10.0
+max_iterations: int = 1000
+max_constraints: int = 100
+
+抽象类:
+ConflictResolver(abc.ABC): 冲突解决器抽象基类
+
+抽象方法:
+
+@abc.abstractmethod find_conflicts(self, paths: Dict[str, Path], vehicles: Dict[str, Any] = None) -> List[Any]
+@abc.abstractmethod resolve_conflicts(self, paths: Dict[str, Path], path_planner: Any, vehicles: Dict[str, Any] = None, obstacles: List[Any] = None) -> Dict[str, Path]
+
+
+
+工厂类:
+ConflictResolverFactory: 冲突解决器工厂类
+
+类方法:
+
+@classmethod register_resolver(cls, resolver_type: ConflictResolverType, resolver_class)
+@classmethod create_resolver(cls, resolver_type: ConflictResolverType, config: Optional[Any] = None) -> ConflictResolver
+@classmethod get_available_resolvers(cls) -> List[ConflictResolverType]
+
+
+
+模块函数:
+
+register_default_resolvers()
+
+2. coordination/dispatcher 模块
+base.py
+外部库导入:
+pythonimport abc
+from enum import Enum, auto
+from typing import Dict, List, Set, Tuple, Any, Optional, Union, Callable
+from datetime import datetime
+内部模块导入:
+pythonfrom utils.logger import get_logger
+from utils.io.serialization import Serializable
+from utils.geo.coordinates import Point2D
+from coordination.dispatcher.dispatch_events import EventType, DispatchEvent, EventListener, EventDispatcher
+枚举类:
+DispatchStatus(Enum): 调度操作状态
+
+IDLE = auto()
+RUNNING = auto()
+PAUSED = auto()
+ERROR = auto()
+
+DispatchStrategy(Enum): 调度策略
+
+FIFO = auto()
+PRIORITY = auto()
+NEAREST = auto()
+BALANCED = auto()
+OPTIMIZED = auto()
+
+异常类:
+
+DispatchError(Exception)
+VehicleNotFoundError(DispatchError)
+TaskNotFoundError(DispatchError)
+
+配置类:
+DispatcherConfig: 调度器配置
+
+init(dispatch_interval: float = 1.0, dispatch_strategy: DispatchStrategy = DispatchStrategy.OPTIMIZED, max_tasks_per_vehicle: int = 5, replan_on_change: bool = True, conflict_resolution_enabled: bool = True, **kwargs)
+
+抽象类:
+Dispatcher(abc.ABC, Serializable): 调度器抽象基类
+
+方法:
+
+init(self, config: Optional[DispatcherConfig] = None)
+@abc.abstractmethod add_vehicle(self, vehicle) -> None
+@abc.abstractmethod remove_vehicle(self, vehicle_id: str) -> bool
+@abc.abstractmethod get_vehicle(self, vehicle_id: str)
+@abc.abstractmethod get_all_vehicles(self) -> dict
+@abc.abstractmethod add_task(self, task) -> None
+@abc.abstractmethod remove_task(self, task_id: str) -> bool
+@abc.abstractmethod get_task(self, task_id: str)
+@abc.abstractmethod get_all_tasks(self) -> dict
+@abc.abstractmethod assign_task(self, task_id: str, vehicle_id: str) -> bool
+@abc.abstractmethod get_assignments(self) -> Dict[str, List[str]]
+@abc.abstractmethod dispatch_cycle(self) -> None
+@abc.abstractmethod start(self) -> None
+@abc.abstractmethod stop(self) -> None
+@abc.abstractmethod pause(self) -> None
+@abc.abstractmethod resume(self) -> None
+@property status(self) -> DispatchStatus
+add_event_listener(self, event_type: EventType, listener: EventListener) -> None
+remove_event_listener(self, event_type: EventType, listener: EventListener) -> None
+dispatch_event(self, event: DispatchEvent) -> None
+to_dict(self) -> Dict[str, Any]
+
+
+
+dispatch_events.py
+外部库导入:
+pythonfrom enum import Enum, auto
+from dataclasses import dataclass
+from typing import Dict, List, Any, Optional, Union
+from datetime import datetime
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+枚举类:
+EventType(Enum): 事件类型枚举
+
+ALL = auto()
+VEHICLE_ADDED = auto()
+VEHICLE_REMOVED = auto()
+VEHICLE_STATE_CHANGED = auto()
+VEHICLE_POSITION_CHANGED = auto()
+TASK_ADDED = auto()
+TASK_ASSIGNED = auto()
+TASK_STARTED = auto()
+TASK_COMPLETED = auto()
+TASK_FAILED = auto()
+TASK_CANCELED = auto()
+DISPATCH_CYCLE_STARTED = auto()
+DISPATCH_CYCLE_COMPLETED = auto()
+DISPATCH_DECISION_MADE = auto()
+PATH_PLANNED = auto()
+PATH_REPLANNED = auto()
+CONFLICT_DETECTED = auto()
+CONFLICT_RESOLVED = auto()
+SYSTEM_ERROR = auto()
+SYSTEM_WARNING = auto()
+SYSTEM_INFO = auto()
+
+数据类:
+@dataclass DispatchEvent: 所有调度事件的基类
+
+event_type: EventType
+timestamp: datetime = None
+方法:
+
+post_init(self)
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass VehicleEvent(DispatchEvent): 车辆相关事件
+
+vehicle_id: str = None
+details: Optional[Dict[str, Any]] = None
+方法:
+
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass TaskEvent(DispatchEvent): 任务相关事件
+
+task_id: str = None
+details: Optional[Dict[str, Any]] = None
+方法:
+
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass AssignmentEvent(DispatchEvent): 任务分配事件
+
+task_id: str = None
+vehicle_id: str = None
+details: Optional[Dict[str, Any]] = None
+方法:
+
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass PathEvent(DispatchEvent): 路径规划事件
+
+vehicle_id: str = None
+path_points: List[Point2D] = None
+details: Optional[Dict[str, Any]] = None
+方法:
+
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass ConflictEvent(DispatchEvent): 冲突检测与解决事件
+
+vehicle_ids: List[str] = None
+conflict_location: Optional[Point2D] = None
+details: Optional[Dict[str, Any]] = None
+方法:
+
+to_dict(self) -> Dict[str, Any]
+
+
+
+@dataclass SystemEvent(DispatchEvent): 系统事件
+
+message: str = None
+details: Optional[Dict[str, Any]] = None
+方法:
+
+to_dict(self) -> Dict[str, Any]
+
+
+
+接口类:
+EventListener: 事件监听器接口
+
+方法:
+
+on_event(self, event: DispatchEvent) -> None
+
+
+
+EventDispatcher: 事件分发器
+
+方法:
+
+init(self)
+add_listener(self, event_type: EventType, listener: EventListener) -> None
+remove_listener(self, event_type: EventType, listener: EventListener) -> None
+dispatch_event(self, event: DispatchEvent) -> None
+
+
+
+mining_dispatcher.py
+外部库导入:
+pythonimport threading
+import time
+import heapq
+from datetime import datetime
+from typing import Dict, List, Set, Tuple, Any, Optional, Union, Callable
+内部模块导入:
+pythonfrom utils.logger import get_logger, timed
+from utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path
+from coordination.dispatcher.base import (
+    Dispatcher, DispatcherConfig, DispatchStatus, DispatchStrategy,
+    VehicleNotFoundError, TaskNotFoundError
+)
+from coordination.dispatcher.dispatch_events import (
+    EventType, DispatchEvent, VehicleEvent, TaskEvent, 
+    AssignmentEvent, PathEvent, ConflictEvent, SystemEvent
+)
+占位枚举类:
+
+VehicleState(Enum)
+TaskStatus(Enum)
+TaskPriority(Enum)
+
+MiningDispatcher(Dispatcher): 矿山调度器
+
+方法:
+
+init(self, environment=None, config: Optional[DispatcherConfig] = None)
+add_vehicle(self, vehicle) -> None
+remove_vehicle(self, vehicle_id: str) -> bool
+get_vehicle(self, vehicle_id: str)
+get_all_vehicles(self) -> dict
+add_task(self, task) -> None
+remove_task(self, task_id: str) -> bool
+_rebuild_pending_tasks(self) -> None
+get_task(self, task_id: str)
+get_all_tasks(self) -> dict
+assign_task(self, task_id: str, vehicle_id: str) -> bool
+get_assignments(self) -> Dict[str, List[str]]
+@timed("dispatch_cycle") dispatch_cycle(self) -> None
+_update_vehicles(self) -> None
+_update_tasks(self) -> None
+_allocate_tasks(self) -> None
+_simple_allocation(self, available_vehicles, pending_tasks)
+_can_handle_task(self, vehicle, task) -> bool
+_plan_paths(self) -> None
+_resolve_conflicts(self) -> None
+start(self) -> None
+stop(self) -> None
+pause(self) -> None
+resume(self) -> None
+_dispatch_loop(self) -> None
+to_dict(self) -> Dict[str, Any]
+_init_allocator(self) -> None
+_init_conflict_resolver(self) -> None
+
+
+
+3. coordination/simulation 模块
+simulation_clock.py
+外部库导入:
+pythonimport time
+import threading
+from enum import Enum, auto
+from typing import Dict, List, Set, Tuple, Any, Optional, Callable
+from datetime import datetime, timedelta
+import heapq
+内部模块导入:
+pythonfrom utils.logger import get_logger
+枚举类:
+ClockStatus(Enum): 时钟状态
+
+STOPPED = auto()
+RUNNING = auto()
+PAUSED = auto()
+
+TimeUpdateMode(Enum): 时间更新模式
+
+REAL_TIME = auto()
+SCALED_TIME = auto()
+STEPPED = auto()
+EVENT_BASED = auto()
+
+类:
+ScheduledEvent: 调度事件
+
+方法:
+
+init(self, sim_time: float, event_id: int, callback: Callable, data: Any = None)
+lt(self, other)
+
+
+
+SimulationClock: 仿真时钟
+
+方法:
+
+init(self, initial_time: Optional[datetime] = None, speed_factor: float = 1.0, update_mode: TimeUpdateMode = TimeUpdateMode.SCALED_TIME, update_interval: float = 0.1)
+@property current_time(self) -> datetime
+@property current_time_float(self) -> float
+@property elapsed_time(self) -> timedelta
+@property elapsed_seconds(self) -> float
+@property status(self) -> ClockStatus
+@property speed_factor(self) -> float
+@speed_factor.setter speed_factor(self, value: float) -> None
+@property update_mode(self) -> TimeUpdateMode
+@update_mode.setter update_mode(self, mode: TimeUpdateMode) -> None
+start(self) -> None
+stop(self) -> None
+pause(self) -> None
+resume(self) -> None
+set_time(self, new_time: datetime) -> None
+advance(self, delta: timedelta) -> None
+schedule_event(self, delay: float, callback: Callable, data: Any = None) -> int
+schedule_at(self, time_point: datetime, callback: Callable, data: Any = None) -> int
+cancel_event(self, event_id: int) -> bool
+add_time_listener(self, listener: Callable[[datetime], None]) -> None
+remove_time_listener(self, listener: Callable[[datetime], None]) -> None
+_notify_time_listeners(self) -> None
+_update_loop(self) -> None
+_update_time(self) -> None
+_process_events_until(self, until_time: datetime) -> None
+
+
+
+simulator.py
+外部库导入:
+pythonimport threading
+import time
+from enum import Enum, auto
+from typing import Dict, List, Set, Tuple, Any, Optional, Callable, Union
+from datetime import datetime, timedelta
+import random
+内部模块导入:
+pythonfrom utils.logger import get_logger, timed
+from utils.config import SystemConfig, get_config
+from utils.geo.coordinates import Point2D
+from utils.io.serialization import Serializable
+from coordination.simulation.simulation_clock import SimulationClock, TimeUpdateMode, ClockStatus
+from coordination.dispatcher.dispatch_events import (
+    EventType, DispatchEvent, VehicleEvent, TaskEvent, 
+    AssignmentEvent, PathEvent, ConflictEvent, SystemEvent,
+    EventListener
+)
+枚举类:
+SimulationStatus(Enum): 仿真状态
+
+STOPPED = auto()
+RUNNING = auto()
+PAUSED = auto()
+COMPLETED = auto()
+ERROR = auto()
+
+配置类:
+SimulationConfig: 仿真配置
+
+init(duration: Optional[timedelta] = None, seed: Optional[int] = None, log_level: str = "INFO", real_time_factor: float = 10.0, task_generation_rate: float = 1.0, vehicle_count: int = 5, environment_size: Tuple[int, int] = (1000, 1000), **kwargs)
+
+数据类:
+@dataclass SimulationMetrics: 仿真指标收集
+
+total_vehicles: int = 0
+total_tasks: int = 0
+completed_tasks: int = 0
+failed_tasks: int = 0
+total_simulation_time: float = 0.0
+total_vehicle_travel_time: float = 0.0
+total_vehicle_idle_time: float = 0.0
+total_task_waiting_time: float = 0.0
+total_task_execution_time: float = 0.0
+total_distance_traveled: float = 0.0
+throughput: float = 0.0
+average_task_completion_time: float = 0.0
+average_task_waiting_time: float = 0.0
+average_vehicle_utilization: float = 0.0
+metrics_by_vehicle: Dict[str, Dict[str, float]] = None
+metrics_by_task_type: Dict[str, Dict[str, float]] = None
+方法:
+
+post_init(self)
+update_efficiency_metrics(self) -> None
+
+
+
+类:
+SimulationEventListener(EventListener): 事件监听器
+
+方法:
+
+init(self, simulator)
+on_event(self, event: DispatchEvent) -> None
+
+
+
+Simulator(Serializable): 仿真器
+
+方法:
+
+init(self, environment=None, dispatcher=None, config: Optional[SimulationConfig] = None)
+@property status(self) -> SimulationStatus
+setup(self) -> None
+_create_environment(self) -> None
+_create_dispatcher(self) -> None
+_create_vehicles(self) -> None
+_create_initial_tasks(self) -> None
+_generate_random_task(self) -> Any
+start(self) -> None
+stop(self) -> None
+pause(self) -> None
+resume(self) -> None
+step(self, time_step: float = 1.0) -> None
+run_until(self, end_time: datetime) -> None
+run_for(self, duration: timedelta) -> None
+_schedule_task_generation(self) -> None
+_generate_task(self) -> None
+_update_metrics(self) -> None
+_finalize_metrics(self) -> None
+get_metrics(self) -> SimulationMetrics
+to_dict(self) -> Dict[str, Any]
+
+
+
+4. ui 模块
+controls/control_panel.py
+外部库导入:
+pythonfrom typing import Dict, List, Optional, Any
+from PyQt5.QtWidgets import (各种Qt组件)
+from PyQt5.QtCore import Qt, QTimer, QSize, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QColor, QBrush, QIcon, QPixmap
+内部模块导入:
+pythonfrom utils.logger import get_logger
+from utils.config import get_config
+类:
+StatisticsPanel(QWidget): 显示统计信息面板
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+set_simulator(self, simulator)
+@pyqtSlot() update_statistics(self)
+
+
+
+DispatcherControlPanel(QWidget): 调度器控制面板
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+set_simulator(self, simulator)
+update_from_dispatcher(self)
+on_strategy_changed(self, index)
+on_config_changed(self)
+apply_configuration(self)
+
+
+
+ControlPanel(QWidget): 主控制面板
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+set_simulator(self, simulator)
+
+
+
+controls/simulation_controls.py
+外部库导入:
+pythonfrom typing import Dict, List, Optional, Any
+from datetime import datetime, timedelta
+from PyQt5.QtWidgets import (各种Qt组件)
+from PyQt5.QtCore import Qt, QTimer, QDateTime, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QIcon
+内部模块导入:
+pythonfrom utils.logger import get_logger
+from utils.config import get_config
+类:
+SimulationControls(QWidget): 仿真控制组件
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+set_simulator(self, simulator)
+@pyqtSlot() update_controls(self)
+play_simulation(self)
+pause_simulation(self)
+stop_simulation(self)
+step_simulation(self)
+change_speed(self)
+run_until_time(self)
+run_for_duration(self)
+
+
+
+dialogs/analysis_dialog.py
+外部库导入:
+pythonfrom typing import Dict, List, Optional, Any, Tuple
+import math
+import random
+from PyQt5.QtWidgets import (各种Qt组件)
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QColor, QPalette, QBrush, QPen
+内部模块导入:
+pythonfrom utils.logger import get_logger
+类:
+ChartWidget(QWidget): 图表显示组件
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+_init_fallback_ui(self)
+plot_bar_chart(self, data: Dict[str, float], title: str, xlabel: str, ylabel: str, color: str = '#3070B0')
+plot_pie_chart(self, data: Dict[str, float], title: str, autopct: str = '%1.1f%%')
+plot_line_chart(self, data: Dict[str, List[float]], x_values: List[float], title: str, xlabel: str, ylabel: str)
+plot_histogram(self, data: List[float], bins: int, title: str, xlabel: str, ylabel: str)
+
+
+
+PerformanceTab(QWidget): 性能分析标签页
+
+方法:
+
+init(self, simulator, parent=None)
+_init_ui(self)
+update_data(self)
+update_chart(self)
+export_data(self)
+
+
+
+TaskAnalysisTab(QWidget): 任务分析标签页
+
+方法:
+
+init(self, simulator, parent=None)
+_init_ui(self)
+update_data(self)
+update_filter(self)
+update_charts(self)
+export_data(self)
+
+
+
+VehicleAnalysisTab(QWidget): 车辆分析标签页
+
+方法:
+
+init(self, simulator, parent=None)
+_init_ui(self)
+update_data(self)
+update_filter(self)
+update_charts(self)
+export_data(self)
+
+
+
+AnalysisDialog(QDialog): 分析对话框
+
+方法:
+
+init(self, simulator, parent=None)
+_init_ui(self)
+refresh_data(self)
+export_all_data(self)
+
+
+
+dialogs/settings_dialog.py
+外部库导入:
+pythonfrom typing import Dict, List, Optional, Any
+from PyQt5.QtWidgets import (各种Qt组件)
+from PyQt5.QtCore import Qt, QSettings, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QColor, QIcon
+内部模块导入:
+pythonfrom utils.logger import get_logger
+from utils.config import get_config, set as set_config
+类:
+ColorButton(QPushButton): 颜色选择按钮
+
+方法:
+
+init(self, color=None, parent=None)
+_update_button(self)
+_choose_color(self)
+set_color(self, color)
+get_color(self)
+
+
+
+GeneralSettingsTab(QWidget): 通用设置标签页
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+_browse_log_file(self)
+save_settings(self)
+
+
+
+MapSettingsTab(QWidget): 地图设置标签页
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+save_settings(self)
+
+
+
+AlgorithmSettingsTab(QWidget): 算法设置标签页
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+save_settings(self)
+
+
+
+SettingsDialog(QDialog): 设置对话框
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+accept(self)
+
+
+
+main_window.py
+外部库导入:
+pythonfrom datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any
+from PyQt5.QtWidgets import (各种Qt组件)
+from PyQt5.QtCore import Qt, QTimer, QSettings, QSize, QPoint, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QIcon, QCloseEvent
+内部模块导入:
+pythonfrom utils.logger import get_logger
+from utils.config import get_config, set as set_config
+from coordination.dispatcher.dispatch_events import EventType, DispatchEvent, EventListener
+from ui.views.map_view import MapView
+from ui.views.task_view import TaskView
+from ui.views.vehicle_view import VehicleView
+from ui.controls.control_panel import ControlPanel
+from ui.controls.simulation_controls import SimulationControls
+from ui.dialogs.settings_dialog import SettingsDialog
+from ui.dialogs.analysis_dialog import AnalysisDialog
+类:
+MainWindow(QMainWindow, EventListener): 主窗口
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+_create_menus(self)
+_create_toolbar(self)
+_load_settings(self)
+_save_settings(self)
+reset_layout(self)
+@pyqtSlot() update_ui(self)
+set_simulator(self, simulator)
+on_event(self, event: DispatchEvent) -> None
+new_simulation(self)
+open_simulation(self)
+load_simulation(self, file_path: str)
+save_simulation(self)
+save_simulation_as(self)
+save_simulation_to(self, file_path: str)
+export_results(self)
+start_simulation(self)
+pause_simulation(self)
+stop_simulation(self)
+step_simulation(self)
+show_settings(self)
+show_analysis(self)
+show_about(self)
+closeEvent(self, event: QCloseEvent)
+
+
+
+模块函数:
+
+main()
+
+views/map_view.py
+外部库导入:
+pythonimport math
+from typing import Dict, List, Optional, Any, Tuple
+from PyQt5.QtWidgets import (各种Qt组件)
+from PyQt5.QtCore import Qt, QPointF, QRectF, QTimer, QSize, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import (各种Qt图形组件)
+内部模块导入:
+pythonfrom utils.logger import get_logger
+from utils.config import get_config
+from utils.geo.coordinates import Point2D
+类:
+VehicleItem(QGraphicsPolygonItem): 车辆图形项
+
+方法:
+
+init(self, vehicle_id: str, pos: QPointF, size: float = 10.0, parent=None)
+set_state(self, state: str, loaded: bool = False)
+set_path(self, path_points: List[QPointF])
+
+
+
+TaskItem(QGraphicsEllipseItem): 任务图形项
+
+方法:
+
+init(self, task_id: str, pos: QPointF, size: float = 8.0, parent=None)
+set_state(self, state: str, priority: int = 1)
+
+
+
+MapView(QWidget): 地图视图
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+_setup_scene(self)
+_create_grid(self, size: int, nodes: int)
+_add_key_locations(self)
+set_simulator(self, simulator)
+@pyqtSlot() update_view(self)
+_update_environment(self)
+_update_vehicles(self)
+_update_tasks(self)
+zoom_in(self)
+zoom_out(self)
+reset_view(self)
+toggle_vehicles(self, show: bool)
+toggle_tasks(self, show: bool)
+toggle_paths(self, show: bool)
+toggle_grid(self, show: bool)
+change_view_mode(self, mode: str)
+highlight_area(self, rect: QRectF)
+clear_highlight(self)
+
+
+
+CustomGraphicsView(QGraphicsView): 自定义图形视图
+
+方法:
+
+init(self, scene, parent=None)
+wheelEvent(self, event: QWheelEvent)
+mousePressEvent(self, event: QMouseEvent)
+mouseReleaseEvent(self, event: QMouseEvent)
+
+
+
+views/task_view.py
+外部库导入:
+pythonfrom typing import Dict, List, Optional, Any
+from datetime import datetime
+from PyQt5.QtWidgets import (各种Qt组件)
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QModelIndex
+from PyQt5.QtGui import QColor, QBrush, QIcon, QPixmap
+内部模块导入:
+pythonfrom utils.logger import get_logger
+from utils.config import get_config
+from utils.geo.coordinates import Point2D
+类:
+TaskDetailsDialog(QDialog): 任务详情对话框
+
+方法:
+
+init(self, task_id: str, task_data: Any, parent=None)
+_init_ui(self)
+cancel_task(self)
+
+
+
+CreateTaskDialog(QDialog): 创建任务对话框
+
+方法:
+
+init(self, simulator, parent=None)
+_init_ui(self)
+get_task_data(self) -> Dict[str, Any]
+
+
+
+TaskView(QWidget): 任务视图
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+set_simulator(self, simulator)
+@pyqtSlot() update_view(self)
+apply_filter(self, filter_text: str)
+show_task_details(self, item: QTableWidgetItem)
+create_new_task(self)
+contextMenuEvent(self, event)
+assign_to_vehicle(self, task_id: str)
+cancel_task(self, task_id: str)
+change_priority(self, task_id: str, priority: str)
+
+
+
+views/vehicle_view.py
+外部库导入:
+pythonfrom typing import Dict, List, Optional, Any
+from PyQt5.QtWidgets import (各种Qt组件)
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, pyqtSlot, QModelIndex
+from PyQt5.QtGui import QColor, QBrush, QIcon, QPixmap
+内部模块导入:
+pythonfrom utils.logger import get_logger
+from utils.config import get_config
+类:
+VehicleDetailsDialog(QDialog): 车辆详情对话框
+
+方法:
+
+init(self, vehicle_id: str, vehicle_data: Any, parent=None)
+_init_ui(self)
+
+
+
+VehicleView(QWidget): 车辆视图
+
+方法:
+
+init(self, parent=None)
+_init_ui(self)
+set_simulator(self, simulator)
+@pyqtSlot() update_view(self)
+apply_filter(self, filter_text: str)
+show_vehicle_details(self, item: QTableWidgetItem)
+contextMenuEvent(self, event)
+assign_task(self, vehicle_id: str)
+cancel_tasks(self, vehicle_id: str)
+send_to_maintenance(self, vehicle_id: str)

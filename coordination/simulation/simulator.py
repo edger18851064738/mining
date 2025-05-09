@@ -15,7 +15,7 @@ from enum import Enum, auto
 from typing import Dict, List, Set, Tuple, Any, Optional, Callable, Union
 from datetime import datetime, timedelta
 import random
-
+from dataclasses import dataclass
 from utils.logger import get_logger, timed
 from utils.config import SystemConfig, get_config
 from utils.geo.coordinates import Point2D
