@@ -1,0 +1,152 @@
+1. algorithms/planning 模块
+common.py
+外部库导入:
+pythonimport math
+from enum import Enum, auto
+from typing import List, Dict, Any, Optional, Tuple, Union, Set
+from dataclasses import dataclass, field
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path, PathType, PathSmoothingMethod
+from utils.math.vectors import Vector2D
+类和枚举:
+
+PlanningStatus(Enum): 规划结果状态枚举
+MotionType(Enum): 车辆运动类型枚举
+DrivingDirection(Enum): 行驶方向枚举
+PlanningConstraints(dataclass): 路径规划约束条件
+PlanningConfig(dataclass): 路径规划配置
+PathSegment(dataclass): 路径段表示
+PlanningResult(dataclass): 规划结果
+
+主要函数:
+pythondef merge_path_segments(segments: List[PathSegment]) -> Path
+def discretize_path_with_headings(path: Path, step_size: float) -> List[Tuple[Point2D, float]]
+def check_collision(path: Path, obstacles: List[Any], vehicle_width: float, vehicle_length: float) -> bool
+def calculate_path_cost(path: Path, config: PlanningConfig) -> float
+def optimize_path(path: Path, config: PlanningConfig, obstacles: List[Any] = None) -> Path
+reeds_shepp.py
+外部库导入:
+pythonimport math
+from enum import Enum, auto
+from typing import List, Tuple, Optional, Dict, Any, Union
+from dataclasses import dataclass, field
+import time
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path, PathType
+from utils.math.vectors import Vector2D
+from utils.logger import get_logger
+
+from algorithms.planning.common import (
+    PlanningStatus, MotionType, DrivingDirection, PathSegment, 
+    PlanningResult, PlanningConfig, merge_path_segments
+)
+类和枚举:
+
+RSCurveType(Enum): Reeds-Shepp曲线段类型
+RSPattern(Enum): Reeds-Shepp路径模式
+RSPathSegment(dataclass): Reeds-Shepp路径段
+RSPath(dataclass): 完整Reeds-Shepp路径
+ReedsSheppPlanner: Reeds-Shepp规划器类
+
+ReedsSheppPlanner方法:
+pythondef __init__(self, config: Optional[PlanningConfig] = None)
+def plan(self, start_x: float, start_y: float, start_heading: float, goal_x: float, goal_y: float, goal_heading: float) -> PlanningResult
+def _normalize_angle(self, angle: float) -> float
+def _find_optimal_path(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_csc_paths(self, x: float, y: float, phi: float) -> List[RSPath]
+def _compute_lsl(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_lsr(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_rsl(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_rsr(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_ccc_paths(self, x: float, y: float, phi: float) -> List[RSPath]
+def _compute_lrl(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_rlr(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _convert_rs_path_to_segments(self, rs_path: RSPath, start_x: float, start_y: float, start_heading: float) -> List[PathSegment]
+def _generate_straight_segment(self, x: float, y: float, heading: float, length: float, direction: DrivingDirection) -> List[Point2D]
+def _generate_arc_segment(self, x: float, y: float, heading: float, angle: float, radius: float, is_left: bool, direction: DrivingDirection) -> List[Point2D]
+hybrid_astar.py
+外部库导入:
+pythonimport math
+import time
+import heapq
+from enum import Enum
+from typing import List, Dict, Set, Tuple, Optional, Any, Union, Callable
+from dataclasses import dataclass, field
+import numpy as np
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path, PathType
+from utils.math.vectors import Vector2D
+from utils.logger import get_logger, timed
+
+from algorithms.planning.common import (
+    PlanningStatus, MotionType, DrivingDirection, PathSegment, 
+    PlanningResult, PlanningConfig, PlanningConstraints,
+    merge_path_segments, discretize_path_with_headings
+)
+from algorithms.planning.reeds_shepp import ReedsSheppPlanner
+类:
+
+HybridAStarNode(dataclass): 混合A*搜索节点
+MotionPrimitive: 运动基元类
+HybridAStarPlanner: 混合A*规划器类
+
+HybridAStarPlanner方法:
+pythondef __init__(self, config: Optional[PlanningConfig] = None)
+def _generate_motion_primitives(self) -> List[MotionPrimitive]
+@timed("hybrid_astar_planning")
+def plan(self, start_x: float, start_y: float, start_heading: float, goal_x: float, goal_y: float, goal_heading: float, obstacles: List[Any] = None) -> PlanningResult
+def _normalize_angle(self, angle: float) -> float
+def _is_goal(self, current: HybridAStarNode, goal: HybridAStarNode) -> bool
+def _heuristic(self, node: HybridAStarNode, goal: HybridAStarNode) -> float
+def _apply_motion(self, node: HybridAStarNode, motion: MotionPrimitive) -> Optional[HybridAStarNode]
+def _motion_cost(self, from_node: HybridAStarNode, to_node: HybridAStarNode, motion: MotionPrimitive) -> float
+def _check_collision(self, node: HybridAStarNode, obstacles: List[Any]) -> bool
+def _count_direction_changes(self, node: HybridAStarNode) -> int
+def _reconstruct_path(self, goal_node: HybridAStarNode) -> PlanningResult
+def plan_path(self, start: Point2D, start_heading: float, goal: Point2D, goal_heading: float, obstacles: List[Any] = None) -> PlanningResult
+interfaces.py
+外部库导入:
+pythonimport abc
+from enum import Enum, auto
+from typing import List, Dict, Any, Optional, Union, Tuple, Type
+from dataclasses import dataclass
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.logger import get_logger
+
+from algorithms.planning.common import (
+    PlanningConfig, PlanningConstraints, PlanningResult, PlanningStatus
+)
+类和枚举:
+
+PlannerType(Enum): 规划器类型枚举
+PathPlanner(abc.ABC): 路径规划器抽象基类
+HybridAStarPlannerBase(PathPlanner): 混合A*规划器基类
+ReedsSheppPlannerBase(PathPlanner): Reeds-Shepp规划器基类
+RRTPlannerBase(PathPlanner): RRT规划器基类
+PlannerFactory: 规划器工厂类
+
+PathPlanner抽象方法:
+python@abc.abstractmethod
+def plan_path(self, start: Point2D, start_heading: float, goal: Point2D, goal_heading: float, obstacles: Optional[List[Any]] = None) -> PlanningResult
+@abc.abstractmethod
+def set_config(self, config: PlanningConfig) -> None
+@abc.abstractmethod
+def get_config(self) -> PlanningConfig
+@classmethod
+@abc.abstractmethod
+def get_planner_type(cls) -> PlannerType
+PlannerFactory方法:
+python@classmethod
+def register_planner(cls, planner_type: PlannerType, planner_class: Type[PathPlanner]) -> None
+@classmethod
+def create_planner(cls, planner_type: PlannerType, config: Optional[PlanningConfig] = None) -> PathPlanner
+@classmethod
+def create_default_planner(cls, config: Optional[PlanningConfig] = None) -> PathPlanner
+@classmethod
+def get_available_planners(cls) -> List[PlannerType]
+模块函数:
+pythondef register_default_planners()

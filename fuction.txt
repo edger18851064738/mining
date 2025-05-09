@@ -1,0 +1,563 @@
+矿山调度系统代码库概览
+根据提供的代码,我整理了现有类和函数的结构,以便未来的代码开发参考。
+系统架构
+系统采用分层架构,主要包括:
+
+领域模型层 (Domain Model)
+
+环境模型 (Environment)
+任务管理 (Tasks)
+车辆模型 (Vehicles)
+
+
+算法服务层 (Algorithm Services)
+
+路径规划 (路径暂不可见)
+冲突解决 (路径暂不可见)
+
+
+支持工具层 (Utils)
+
+几何和坐标工具
+向量和轨迹工具
+配置系统
+I/O与序列化
+日志系统
+
+
+
+1. 领域模型层
+1.1 环境模型 (domain/environment/)
+基础类:
+
+Environment (抽象类): 所有环境类型的基类
+
+管理障碍物、关键位置和路径查找
+主要方法: is_obstacle, is_traversable, find_path
+
+
+GridEnvironment: 基于网格的环境实现
+
+网格表示的环境,包含网格到实际坐标的转换
+主要方法: set_terrain_property, get_terrain_property, find_path (使用A*算法)
+
+
+
+专业化类:
+
+MiningEnvironment: 矿山专用环境
+
+包含地形特性(硬度、坡度、湿度、矿石品位)
+包含运营区域(装载区、卸载区、停车场等)
+主要方法: create_terrain_features, calculate_traversal_cost, find_nearest_zone
+
+
+MiningZone: 矿区操作区域
+
+表示多边形区域,如装载区、卸载区等
+主要方法: contains_point, distance_to_point
+
+
+
+障碍物类:
+
+Obstacle (抽象类): 所有障碍物的基类
+PointObstacle: 圆形障碍物
+RectangleObstacle: 矩形障碍物
+PolygonObstacle: 多边形障碍物
+CompositeObstacle: 组合障碍物
+
+枚举类型:
+
+ZoneType: 区域类型(装载、卸载、停车等)
+TerrainType: 地形类型(岩石、砂砾、泥土等)
+
+1.2 任务系统 (domain/tasks/)
+基础类:
+
+Task (抽象类): 所有任务的基类
+
+任务的基本属性和状态管理
+主要方法: assign, start, complete, fail, cancel, reset, update_progress
+
+
+TaskAssignment: 任务分配
+
+跟踪任务分配和性能指标
+主要方法: start, complete, fail, cancel, update_progress
+
+
+
+任务类型:
+
+TransportTask: 运输任务
+
+从起点到终点的完整运输操作
+阶段: 准备、装载、运输、卸载
+主要方法: set_path, load, unload, update_location
+
+
+LoadingTask: 装载任务
+
+专门用于装载材料
+主要方法: update_loading_rate, load
+
+
+UnloadingTask: 卸载任务
+
+专门用于卸载材料
+主要方法: update_unloading_rate, unload
+
+
+
+状态管理:
+
+TaskStatus (枚举): 任务状态(待处理、已分配、进行中、已完成等)
+TaskPriority (枚举): 任务优先级(低、中、高、紧急等)
+TaskType (枚举): 任务类型(运输、装载、卸载等)
+TaskStatusManager: 任务状态管理器
+
+管理状态转换和历史记录
+主要方法: transition_to, get_status_history
+
+
+
+1.3 车辆系统 (domain/vehicles/)
+基础类:
+
+Vehicle (抽象类): 所有车辆的基类
+
+位置、方向和路径管理
+主要方法: update_position, calculate_path_to, assign_path, assign_task
+
+
+ConstrainedVehicle: 带物理约束的车辆
+
+增加最大速度、加速度、转弯半径等物理约束
+主要方法: update_speed, get_stopping_distance, get_turning_distance
+
+
+
+专业化类:
+
+MiningVehicle: 矿山车辆
+
+添加装载能力、地形能力等矿山特性
+主要方法: load, unload, perform_maintenance
+
+
+DumpTruck: 矿用卡车
+
+高载重、中速度
+主要方法: raise_bed, lower_bed
+
+
+Excavator: 挖掘机
+
+有限移动性,高挖掘能力
+主要方法: extend_arm, dig, load_vehicle
+
+
+SupportVehicle: 支援车辆
+
+高移动性,专用维修设备
+主要方法: repair_vehicle, refuel_vehicle
+
+
+
+状态管理:
+
+VehicleState (枚举): 车辆状态(空闲、路上、装载、卸载等)
+TransportStage (枚举): 运输阶段(接近、装载、运输、卸载、返回)
+VehicleStateManager: 车辆状态管理器
+
+管理状态转换和历史记录
+主要方法: transition_to, get_state_history
+
+
+
+2. 支持工具层
+2.1 几何和坐标 (utils/geo/)
+坐标类:
+
+Point2D: 二维点
+
+主要方法: distance_to, midpoint, translate
+
+
+Point3D: 三维点
+
+主要方法: distance_to, to_2d
+
+
+BoundingBox: 边界盒
+
+主要方法: contains_point, intersects, expand
+
+
+
+距离计算函数:
+
+euclidean_distance_2d, euclidean_distance_3d: 欧几里得距离
+manhattan_distance: 曼哈顿距离
+point_to_segment_distance: 点到线段距离
+segment_to_segment_distance: 线段间距离
+point_to_polygon_distance: 点到多边形距离
+segments_intersect: 检测线段相交
+
+坐标转换:
+
+GridMap: 连续坐标与网格单元之间的映射
+
+主要方法: world_to_grid, grid_to_world
+
+
+CoordinateTransformer: 不同坐标系统之间的转换
+
+主要方法: grid_to_meters, meters_to_grid
+
+
+
+2.2 数学工具 (utils/math/)
+向量类:
+
+Vector2D: 二维向量
+
+主要操作: 加减乘除、点积、叉积、规范化、旋转
+主要方法: normalized, dot, cross_scalar, rotate, project_onto
+
+
+Vector3D: 三维向量
+
+主要操作: 加减乘除、点积、叉积、规范化
+主要方法: normalized, dot, cross, project_onto
+
+
+
+路径和轨迹:
+
+Path: 路径表示(点序列)
+
+主要方法: length, resample_by_distance, smooth, reverse
+
+
+Trajectory: 带时间信息的路径
+
+主要方法: position_at_time, velocity_at_time, heading_at_time
+
+
+
+路径生成函数:
+
+generate_straight_line_path: 生成直线路径
+generate_circular_arc_path: 生成圆弧路径
+generate_bezier_path: 生成贝塞尔曲线路径
+generate_s_curve_path: 生成S曲线路径
+
+路径处理函数:
+
+resample_path_by_curvature: 基于曲率重采样路径
+calculate_path_curvature: 计算路径曲率
+merge_paths: 合并多条路径
+
+2.3 配置系统 (utils/config.py)
+配置类:
+
+ConfigManager: 配置管理器
+
+主要方法: load_config, save_config, update_from_dict, get, set
+
+
+SystemConfig: 系统整体配置
+MapConfig: 地图和环境配置
+VehicleConfig: 车辆配置
+AlgorithmConfig: 算法配置
+LoggingConfig: 日志配置
+UIConfig: 用户界面配置
+
+访问函数:
+
+get_config(): 获取全局配置
+load_config(path): 从文件加载配置
+save_config(path): 保存配置到文件
+get(section, key): 获取特定配置值
+set(section, key, value): 设置特定配置值
+
+2.4 I/O和序列化 (utils/io/)
+文件操作:
+
+safe_open: 安全打开文件的上下文管理器
+read_text_file, write_text_file: 文本文件读写
+read_binary_file, write_binary_file: 二进制文件读写
+read_json_file, write_json_file: JSON文件读写
+read_yaml_file, write_yaml_file: YAML文件读写
+read_csv_file, write_csv_file: CSV文件读写
+
+序列化:
+
+Serializable: 可序列化对象的混入类
+
+主要方法: to_dict, to_json, to_yaml, from_dict
+
+
+JSONEncoder, JSONDecoder: 自定义JSON编解码器
+to_json, from_json: JSON序列化和反序列化
+to_yaml, from_yaml: YAML序列化和反序列化
+
+辅助函数:
+
+calculate_file_hash: 计算文件哈希值
+detect_file_format: 检测文件格式
+create_zip_archive, extract_zip_archive: ZIP归档操作
+
+2.5 日志系统 (utils/logger.py)
+日志类:
+
+LogManager: 集中日志管理器
+
+主要方法: get_logger, start_timer, stop_timer
+
+
+PerformanceTracker: 性能跟踪器
+
+主要方法: start_timer, stop_timer, get_metrics
+
+
+
+辅助函数和装饰器:
+
+get_logger(name): 获取组件日志记录器
+timed(operation): 跟踪函数执行时间的装饰器
+log_exceptions(logger_name): 记录异常的装饰器
+
+系统设计特点
+
+模块化设计: 每个组件独立,易于替换和测试
+清晰的接口: 明确定义的接口保证组件间交互稳定
+统一的数据类型: 避免坐标和点类型不一致问题
+分离的关注点: 算法、领域模型和调度逻辑分离
+可扩展性: 易于添加新算法、车辆类型或任务类型
+可测试性: 模块化设计便于单元测试和集成测试
+
+这个系统为构建露天矿多车协同调度系统提供了坚实的基础,包含了环境表示、车辆模型、任务管理和路径规划所需的全部核心组件。
+
+1. Environment Coordinates Module
+Point Classes (environment/coordinates/point.py)
+EnvironmentPoint2D
+Extends base Point2D with environment-specific functionality:
+
+Properties dictionary for storing additional attributes
+Key methods:
+
+with_property(key, value) - Create new point with added property
+with_properties(properties) - Create new point with added properties
+get_property(key, default) - Get property value
+has_property(key) - Check if property exists
+from_base(point), to_base() - Conversion between types
+
+
+
+EnvironmentPoint3D
+Extends base Point3D with similar functionality, plus:
+
+to_2d() - Project to 2D point preserving properties
+
+Coordinate Transforms (environment/coordinates/transforms.py)
+EnvironmentTransformer
+Handles coordinate transformations between systems:
+
+Grid-to-world and world-to-grid conversions
+Elevation transformations with scaling
+Property-specific transformers
+Path transformations for converting lists of points
+Key methods:
+
+world_to_grid(point), grid_to_world(point) - 2D transformations
+world_to_grid_3d(point), grid_to_world_3d(point) - 3D transformations
+elevation_to_world(elevation), world_to_elevation(world_elevation)
+register_property_transformer(property_name, world_to_grid_func, grid_to_world_func)
+transform_path(path, direction) - Transform entire paths
+
+
+
+2. Environment Map Module
+Map Interfaces (environment/map/interfaces.py)
+MapError
+Base exception for map-related errors.
+MapNode
+Representation of a node in a map:
+
+Properties: node_id, position, node_type, properties, edges
+Serialization: to_dict(), from_dict()
+
+MapEdge
+Representation of an edge connecting map nodes:
+
+Properties: edge_id, start_node, end_node, edge_type, properties
+Serialization: to_dict(), from_dict()
+
+Map (Abstract Base Class)
+Defines the common interface for all map implementations:
+
+Node operations: get_node(), add_node(), remove_node()
+Edge operations: get_edge(), add_edge(), remove_edge()
+Query methods: get_nodes(), get_edges(), get_connected_nodes()
+Path finding: find_path(), find_nearest_node()
+Bounds query: get_bounds()
+Serialization: to_dict(), from_dict()
+
+Grid Map (environment/map/grid_map.py)
+GridCell
+Representation of a cell in a grid map:
+
+Properties: cell_id, row, col, passable, properties
+Serialization: to_dict(), from_dict()
+
+GridMap
+Grid-based map implementation:
+
+Represents environment as a grid of cells
+Builds a connectivity graph with nodes and edges
+Key methods:
+
+Coordinate conversion: cell_to_world(), world_to_cell()
+Cell access: get_cell(), get_cell_by_position(), get_cell_by_id()
+Cell modification: set_cell_passable()
+Path finding using A* algorithm: find_path()
+Nearest node query: find_nearest_node()
+
+
+
+Road Network (environment/map/road_network.py)
+RoadType
+Constants for different road types: MAIN, SECONDARY, ACCESS, TRANSIT, RESTRICTED
+RoadNetwork
+Road network map implementation:
+
+Uses NetworkX graph for algorithms
+Spatial indexing for efficient nearest-node queries
+Key methods:
+
+Node/edge operations: add_node(), add_edge(), remove_node(), remove_edge()
+Path finding: find_path()
+Nearest node query with KD-tree: find_nearest_node()
+High-level operations:
+
+add_junction(position) - Add junction node
+add_road(start_node_id, end_node_id, road_type) - Add road between nodes
+generate_grid_network(rows, cols, cell_size) - Create grid road network
+generate_radial_network(center, radius, num_radials, num_rings) - Create radial network
+
+
+
+
+
+3. Environment Terrain Module
+Terrain Features (environment/terrain/features.py)
+Enumerations
+
+TerrainType: FLAT, SLOPE, HILL, VALLEY, EXCAVATION, ROAD, WATER, RESTRICTED
+SlopeDirection: NORTH, NORTHEAST, EAST, etc.
+MaterialType: DIRT, CLAY, SAND, GRAVEL, etc.
+
+TerrainFeature (Base Class)
+Base class for terrain features with common interface:
+
+Properties: feature_id, name, bounds, properties
+Key methods:
+
+contains_point(point) - Check if feature contains point
+get_elevation(point) - Get elevation at point
+get_slope(point) - Get slope at point (angle and direction)
+get_hardness(point) - Get terrain hardness at point
+get_material(point) - Get material type at point
+is_traversable(point, vehicle_properties) - Check traversability
+get_traversal_cost(point, vehicle_properties) - Get traversal cost
+to_dict() - Serialize to dictionary
+
+
+
+Specific Terrain Features
+
+SlopeFeature: Sloped area with constant gradient
+HillFeature: Hill or mound with peak at center
+ExcavationFeature: Excavated area with lower elevation
+RoadFeature: Constructed road or path for vehicles
+WaterFeature: Body of water such as lake or pond
+RestrictedAreaFeature: Area with restricted access
+
+Terrain Analyzer (environment/terrain/analyzer.py)
+Enumerations
+
+AnalysisResolution: LOW, MEDIUM, HIGH, ULTRA
+AnalysisMode: TRAVERSABILITY, EXCAVATION, SAFETY, EFFICIENCY, ENVIRONMENTAL
+
+TerrainAnalysisError
+Exception for terrain analysis errors.
+TerrainAnalyzer
+Analyzer for terrain characteristics and traversability:
+
+Manages collection of terrain features
+Key methods:
+
+Feature management: add_feature(), remove_feature(), get_features_at_point()
+Terrain queries: get_elevation(), get_terrain_property(), is_traversable()
+Path finding: find_obstacle_free_path(), find_optimal_path()
+Region analysis: analyze_region(), generate_traversability_map()
+Feature queries: find_slope_features(), find_excavation_features()
+Safety analysis: identify_hazard_areas()
+
+
+
+TerrainDifferenceAnalyzer
+Compares terrain features between two snapshots:
+
+Methods:
+
+find_elevation_changes() - Identify areas of elevation change
+identify_new_features() - Find features added since baseline
+identify_modified_features() - Find features that have changed
+
+
+
+HeatMapGenerator
+Creates heat maps for terrain properties:
+
+Methods:
+
+generate_traversability_heatmap() - Heat map for traversability
+generate_property_heatmap() - Heat map for specific property
+generate_path_safety_heatmap() - Heat map highlighting hazard areas
+
+
+
+Relationships and Dependencies
+Core Dependencies
+
+The EnvironmentPoint2D/3D classes extend from base point classes in utils.geo.coordinates
+EnvironmentTransformer uses CoordinateTransformer from utils.geo.transforms
+Map implementations (GridMap, RoadNetwork) implement the Map interface
+Terrain features derive from the base TerrainFeature class
+
+Key Workflows
+
+Coordinate Transformation:
+
+Base points → Environment points → Grid/World coordinates
+Property preservation during transformations
+
+
+Map Generation and Pathfinding:
+
+Create map (grid or road network)
+Add nodes and connections
+Use find_path() for path planning
+Apply terrain costs for realistic pathing
+
+
+Terrain Analysis:
+
+Create terrain features
+Query terrain properties at specific points
+Generate traversability maps and heatmaps
+Compare terrain changes over time

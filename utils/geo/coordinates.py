@@ -4,7 +4,11 @@ Coordinate system definitions and point classes for the mining dispatch system.
 This module provides standardized point classes and operations to ensure
 consistent coordinate handling throughout the system.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 import math
 from typing import Tuple, List, Union, Optional, TypeVar, Generic
 

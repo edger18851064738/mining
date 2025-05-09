@@ -4,7 +4,11 @@ Vector mathematics utilities for the mining dispatch system.
 Provides vector operations used in path planning, collision detection,
 and other geometric calculations.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 import math
 from typing import Tuple, List, Union, Optional
 import numpy as np

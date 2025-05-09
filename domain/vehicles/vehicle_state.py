@@ -3,7 +3,11 @@ Vehicle state definitions for the mining dispatch system.
 
 Defines the possible states and transitions for vehicles in the system.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 from enum import Enum, auto
 from typing import Dict, List, Set, Optional
 

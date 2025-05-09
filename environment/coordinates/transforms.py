@@ -4,7 +4,11 @@ Coordinate transformation utilities for the mining dispatch system.
 Provides specialized transformations for the environment module, building
 on the base coordinate transformations.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 import math
 from typing import Tuple, List, Union, Optional, Dict, Any
 import numpy as np

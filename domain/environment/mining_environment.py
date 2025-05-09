@@ -4,7 +4,11 @@ Mining environment implementation for the mining dispatch system.
 Provides a specialized environment representation for open-pit mining operations,
 including terrain hardness, grades, and mining-specific operational zones.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 from enum import Enum, auto
 import math
 import random

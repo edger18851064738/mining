@@ -1,0 +1,1292 @@
+1. algorithms/planning 模块
+common.py
+外部库导入:
+pythonimport math
+from enum import Enum, auto
+from typing import List, Dict, Any, Optional, Tuple, Union, Set
+from dataclasses import dataclass, field
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path, PathType, PathSmoothingMethod
+from utils.math.vectors import Vector2D
+类和枚举:
+
+PlanningStatus(Enum): 规划结果状态枚举
+MotionType(Enum): 车辆运动类型枚举
+DrivingDirection(Enum): 行驶方向枚举
+PlanningConstraints(dataclass): 路径规划约束条件
+PlanningConfig(dataclass): 路径规划配置
+PathSegment(dataclass): 路径段表示
+PlanningResult(dataclass): 规划结果
+
+主要函数:
+pythondef merge_path_segments(segments: List[PathSegment]) -> Path
+def discretize_path_with_headings(path: Path, step_size: float) -> List[Tuple[Point2D, float]]
+def check_collision(path: Path, obstacles: List[Any], vehicle_width: float, vehicle_length: float) -> bool
+def calculate_path_cost(path: Path, config: PlanningConfig) -> float
+def optimize_path(path: Path, config: PlanningConfig, obstacles: List[Any] = None) -> Path
+reeds_shepp.py
+外部库导入:
+pythonimport math
+from enum import Enum, auto
+from typing import List, Tuple, Optional, Dict, Any, Union
+from dataclasses import dataclass, field
+import time
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path, PathType
+from utils.math.vectors import Vector2D
+from utils.logger import get_logger
+
+from algorithms.planning.common import (
+    PlanningStatus, MotionType, DrivingDirection, PathSegment, 
+    PlanningResult, PlanningConfig, merge_path_segments
+)
+类和枚举:
+
+RSCurveType(Enum): Reeds-Shepp曲线段类型
+RSPattern(Enum): Reeds-Shepp路径模式
+RSPathSegment(dataclass): Reeds-Shepp路径段
+RSPath(dataclass): 完整Reeds-Shepp路径
+ReedsSheppPlanner: Reeds-Shepp规划器类
+
+ReedsSheppPlanner方法:
+pythondef __init__(self, config: Optional[PlanningConfig] = None)
+def plan(self, start_x: float, start_y: float, start_heading: float, goal_x: float, goal_y: float, goal_heading: float) -> PlanningResult
+def _normalize_angle(self, angle: float) -> float
+def _find_optimal_path(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_csc_paths(self, x: float, y: float, phi: float) -> List[RSPath]
+def _compute_lsl(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_lsr(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_rsl(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_rsr(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_ccc_paths(self, x: float, y: float, phi: float) -> List[RSPath]
+def _compute_lrl(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _compute_rlr(self, x: float, y: float, phi: float) -> Optional[RSPath]
+def _convert_rs_path_to_segments(self, rs_path: RSPath, start_x: float, start_y: float, start_heading: float) -> List[PathSegment]
+def _generate_straight_segment(self, x: float, y: float, heading: float, length: float, direction: DrivingDirection) -> List[Point2D]
+def _generate_arc_segment(self, x: float, y: float, heading: float, angle: float, radius: float, is_left: bool, direction: DrivingDirection) -> List[Point2D]
+hybrid_astar.py
+外部库导入:
+pythonimport math
+import time
+import heapq
+from enum import Enum
+from typing import List, Dict, Set, Tuple, Optional, Any, Union, Callable
+from dataclasses import dataclass, field
+import numpy as np
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.math.trajectories import Path, PathType
+from utils.math.vectors import Vector2D
+from utils.logger import get_logger, timed
+
+from algorithms.planning.common import (
+    PlanningStatus, MotionType, DrivingDirection, PathSegment, 
+    PlanningResult, PlanningConfig, PlanningConstraints,
+    merge_path_segments, discretize_path_with_headings
+)
+from algorithms.planning.reeds_shepp import ReedsSheppPlanner
+类:
+
+HybridAStarNode(dataclass): 混合A*搜索节点
+MotionPrimitive: 运动基元类
+HybridAStarPlanner: 混合A*规划器类
+
+HybridAStarPlanner方法:
+pythondef __init__(self, config: Optional[PlanningConfig] = None)
+def _generate_motion_primitives(self) -> List[MotionPrimitive]
+@timed("hybrid_astar_planning")
+def plan(self, start_x: float, start_y: float, start_heading: float, goal_x: float, goal_y: float, goal_heading: float, obstacles: List[Any] = None) -> PlanningResult
+def _normalize_angle(self, angle: float) -> float
+def _is_goal(self, current: HybridAStarNode, goal: HybridAStarNode) -> bool
+def _heuristic(self, node: HybridAStarNode, goal: HybridAStarNode) -> float
+def _apply_motion(self, node: HybridAStarNode, motion: MotionPrimitive) -> Optional[HybridAStarNode]
+def _motion_cost(self, from_node: HybridAStarNode, to_node: HybridAStarNode, motion: MotionPrimitive) -> float
+def _check_collision(self, node: HybridAStarNode, obstacles: List[Any]) -> bool
+def _count_direction_changes(self, node: HybridAStarNode) -> int
+def _reconstruct_path(self, goal_node: HybridAStarNode) -> PlanningResult
+def plan_path(self, start: Point2D, start_heading: float, goal: Point2D, goal_heading: float, obstacles: List[Any] = None) -> PlanningResult
+interfaces.py
+外部库导入:
+pythonimport abc
+from enum import Enum, auto
+from typing import List, Dict, Any, Optional, Union, Tuple, Type
+from dataclasses import dataclass
+内部模块导入:
+pythonfrom utils.geo.coordinates import Point2D
+from utils.logger import get_logger
+
+from algorithms.planning.common import (
+    PlanningConfig, PlanningConstraints, PlanningResult, PlanningStatus
+)
+类和枚举:
+
+PlannerType(Enum): 规划器类型枚举
+PathPlanner(abc.ABC): 路径规划器抽象基类
+HybridAStarPlannerBase(PathPlanner): 混合A*规划器基类
+ReedsSheppPlannerBase(PathPlanner): Reeds-Shepp规划器基类
+RRTPlannerBase(PathPlanner): RRT规划器基类
+PlannerFactory: 规划器工厂类
+
+PathPlanner抽象方法:
+python@abc.abstractmethod
+def plan_path(self, start: Point2D, start_heading: float, goal: Point2D, goal_heading: float, obstacles: Optional[List[Any]] = None) -> PlanningResult
+@abc.abstractmethod
+def set_config(self, config: PlanningConfig) -> None
+@abc.abstractmethod
+def get_config(self) -> PlanningConfig
+@classmethod
+@abc.abstractmethod
+def get_planner_type(cls) -> PlannerType
+PlannerFactory方法:
+python@classmethod
+def register_planner(cls, planner_type: PlannerType, planner_class: Type[PathPlanner]) -> None
+@classmethod
+def create_planner(cls, planner_type: PlannerType, config: Optional[PlanningConfig] = None) -> PathPlanner
+@classmethod
+def create_default_planner(cls, config: Optional[PlanningConfig] = None) -> PathPlanner
+@classmethod
+def get_available_planners(cls) -> List[PlannerType]
+模块函数:
+pythondef register_default_planners()
+
+2. algorithms/common 模块
+graph.py
+外部库导入:
+pythonfrom enum import Enum
+from typing import Dict, List, Set, Tuple, Any, Optional, TypeVar, Generic, Callable, Iterable
+from dataclasses import dataclass, field
+import heapq
+import math
+内部模块导入:
+pythonfrom utils.logger import get_logger
+类和枚举:
+
+EdgeType(Enum): 图边类型枚举
+Edge(Generic[T], dataclass): 图边表示
+Graph(Generic[T]): 通用图数据结构
+GridGraph(Graph[Tuple[int, int]]): 网格图表示
+WeightedGraph(Graph[T]): 带权图表示
+
+Graph方法:
+pythondef __init__(self)
+def add_node(self, node: T, **metadata) -> None
+def add_edge(self, source: T, target: T, cost: float = 1.0, edge_type: EdgeType = EdgeType.DIRECTED, **metadata) -> None
+def remove_node(self, node: T) -> None
+def remove_edge(self, source: T, target: T) -> None
+def get_neighbors(self, node: T) -> List[T]
+def get_edges(self, node: T) -> List[Edge[T]]
+def get_edge(self, source: T, target: T) -> Optional[Edge[T]]
+def get_edge_cost(self, source: T, target: T) -> float
+def has_node(self, node: T) -> bool
+def has_edge(self, source: T, target: T) -> bool
+def node_count(self) -> int
+def edge_count(self) -> int
+def get_all_edges(self) -> List[Edge[T]]
+def is_directed(self) -> bool
+def get_connected_components(self) -> List[Set[T]]
+def to_dict(self) -> Dict[str, Any]
+GridGraph方法:
+pythondef __init__(self, width: int, height: int, diagonal: bool = True)
+def _generate_grid(self) -> None
+def set_obstacle(self, x: int, y: int, is_obstacle: bool = True) -> None
+def is_obstacle(self, x: int, y: int) -> bool
+def is_valid_position(self, x: int, y: int) -> bool
+def set_cost_modifier(self, x: int, y: int, modifier: float) -> None
+def get_path_cost(self, path: List[Tuple[int, int]]) -> float
+WeightedGraph方法:
+pythondef get_minimum_spanning_tree(self) -> 'WeightedGraph[T]'
+def get_shortest_path_tree(self, source: T) -> 'WeightedGraph[T]'
+模块函数:
+pythondef grid_to_graph(grid: List[List[bool]], diagonal: bool = True) -> GridGraph
+def build_visibility_graph(obstacles: List[List[Tuple[float, float]]], add_points: List[Tuple[float, float]] = None) -> Graph[Tuple[float, float]]
+search.py
+外部库导入:
+pythonimport heapq
+import math
+from typing import Dict, List, Set, Tuple, Any, Optional, TypeVar, Generic, Callable, Iterable
+from dataclasses import dataclass, field
+import time
+内部模块导入:
+pythonfrom utils.logger import get_logger, timed
+from algorithms.common.graph import Graph, Edge, EdgeType
+类:
+
+SearchResult(Generic[T], dataclass): 搜索结果
+Search: 搜索算法静态类
+
+Search静态方法:
+python@staticmethod
+@timed("breadth_first_search")
+def breadth_first_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]
+@staticmethod
+@timed("depth_first_search")
+def depth_first_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]
+@staticmethod
+@timed("dijkstra")
+def dijkstra(graph: Graph[T], start: T, goal: Optional[T] = None) -> SearchResult[T]
+@staticmethod
+@timed("a_star")
+def a_star(graph: Graph[T], start: T, goal: T, heuristic: Callable[[T, T], float]) -> SearchResult[T]
+@staticmethod
+@timed("bidirectional_search")
+def bidirectional_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]
+模块函数:
+pythondef manhattan_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float
+def euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float
+def diagonal_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float
+def chebyshev_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float
+def smooth_path(path: List[T], max_deviation: float = 1.0) -> List[T]
+
+3. coordination/allocation 模块
+base.py
+外部库导入:
+pythonimport abc
+from enum import Enum, auto
+from typing import Dict, List, Set, Tuple, Any, Optional, TypeVar, Generic
+from dataclasses import dataclass, field
+import time
+内部模块导入:
+pythonfrom utils.logger import get_logger
+类和枚举:
+
+AllocationStrategy(Enum): 任务分配策略枚举
+AllocationStatus(Enum): 分配结果状态枚举
+AllocationObjective(Enum): 优化目标枚举
+AllocationConfig(dataclass): 任务分配配置
+AllocationResult(dataclass): 分配结果
+TaskAllocator(abc.ABC): 任务分配器抽象基类
+
+TaskAllocator方法:
+pythondef __init__(self, config: Optional[AllocationConfig] = None)
+@abc.abstractmethod
+def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+@abc.abstractmethod
+def reallocate(self, current_allocations: Dict[str, List[str]], new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+def get_strategy(self) -> AllocationStrategy
+def set_config(self, config: AllocationConfig) -> None
+def validate_allocation(self, allocation: Dict[str, List[str]], tasks: Dict[str, Any], vehicles: Dict[str, Any]) -> bool
+def calculate_objective_value(self, allocation: Dict[str, List[str]], tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Dict[Tuple[str, str], float]) -> float
+priority_allocator.py
+外部库导入:
+pythonfrom typing import Dict, List, Set, Tuple, Any, Optional
+import time
+import heapq
+from collections import defaultdict
+内部模块导入:
+pythonfrom utils.logger import get_logger, timed
+from coordination.allocation.base import (
+    TaskAllocator, AllocationConfig, AllocationResult, 
+    AllocationStatus, AllocationStrategy, AllocationObjective
+)
+类:
+
+PriorityAllocator(TaskAllocator): 基于优先级的任务分配器
+
+PriorityAllocator方法:
+pythondef __init__(self, config: Optional[AllocationConfig] = None)
+@timed("priority_allocation")
+def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+@timed("priority_reallocation")
+def reallocate(self, current_allocations: Dict[str, List[str]], new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+def _create_default_cost_matrix(self, tasks: Dict[str, Any], vehicles: Dict[str, Any]) -> Dict[Tuple[str, str], float]
+def _is_vehicle_suitable(self, vehicle: Any, task: Any) -> bool
+miqp_allocator.py
+外部库导入:
+pythonfrom typing import Dict, List, Set, Tuple, Any, Optional
+import time
+import numpy as np
+内部模块导入:
+pythonfrom utils.logger import get_logger, timed
+from coordination.allocation.base import (
+    TaskAllocator, AllocationConfig, AllocationResult, 
+    AllocationStatus, AllocationStrategy, AllocationObjective
+)
+类:
+
+MIQPAllocator(TaskAllocator): 基于混合整数二次规划的任务分配器
+
+MIQPAllocator方法:
+pythondef __init__(self, config: Optional[AllocationConfig] = None)
+@timed("miqp_allocation")
+def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+@timed("miqp_reallocation")
+def reallocate(self, current_allocations: Dict[str, List[str]], new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+def _create_default_cost_matrix(self, tasks: Dict[str, Any], vehicles: Dict[str, Any]) -> Dict[Tuple[str, str], float]
+def _is_vehicle_suitable(self, vehicle: Any, task: Any) -> bool
+def _solve_with_pulp(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult
+def _solve_with_gurobi(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult
+def _solve_with_cvxpy(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult
+
+露天矿多车协同调度系统 - domain目录类与函数概览
+环境模块 (environment)
+base.py
+异常类
+
+EnvironmentError(Exception)
+
+基础环境类
+
+Environment(ABC, Serializable)
+
+__init__(name: str, bounds: Union[BoundingBox, Tuple[float, float, float, float]], resolution: float = 1.0)
+属性: width, height, center, obstacles, key_locations
+方法:
+
+add_obstacle(point: Union[Point2D, Tuple[float, float]]) -> None
+add_obstacles(points: List[Union[Point2D, Tuple[float, float]]]) -> None
+remove_obstacle(point: Union[Point2D, Tuple[float, float]]) -> bool
+clear_obstacles() -> None
+add_key_location(name: str, point: Union[Point2D, Tuple[float, float]]) -> None
+remove_key_location(name: str) -> bool
+get_key_location(name: str) -> Optional[Point2D]
+is_obstacle(point: Union[Point2D, Tuple[float, float]]) -> bool (抽象)
+is_traversable(point: Union[Point2D, Tuple[float, float]], vehicle=None) -> bool (抽象)
+find_path(start: Union[Point2D, Tuple[float, float]], end: Union[Point2D, Tuple[float, float]], vehicle=None) -> List[Point2D] (抽象)
+to_dict() -> Dict[str, Any]
+
+
+
+
+
+网格环境类
+
+GridEnvironment(Environment)
+
+__init__(name: str, bounds: Union[BoundingBox, Tuple[float, float, float, float]], resolution: float = 1.0)
+方法:
+
+_point_to_grid(point: Union[Point2D, Tuple[float, float]]) -> Tuple[int, int]
+_grid_to_point(grid_x: int, grid_y: int) -> Point2D
+add_obstacle(point: Union[Point2D, Tuple[float, float]]) -> None
+remove_obstacle(point: Union[Point2D, Tuple[float, float]]) -> bool
+clear_obstacles() -> None
+set_terrain_property(point: Union[Point2D, Tuple[float, float]], hardness: float) -> None
+get_terrain_property(point: Union[Point2D, Tuple[float, float]]) -> float
+is_obstacle(point: Union[Point2D, Tuple[float, float]]) -> bool
+is_traversable(point: Union[Point2D, Tuple[float, float]], vehicle=None) -> bool
+find_path(start: Union[Point2D, Tuple[float, float]], end: Union[Point2D, Tuple[float, float]], vehicle=None) -> List[Point2D]
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'GridEnvironment' (类方法)
+
+
+
+
+
+mining_environment.py
+枚举类
+
+ZoneType(Enum): LOADING, UNLOADING, PARKING, CHARGING, MAINTENANCE, EXCAVATION, DRILLING, BLASTING, RESTRICTED, TRANSIT
+TerrainType(Enum): SOLID_ROCK, LOOSE_ROCK, GRAVEL, DIRT, CLAY, SAND, WATER, ORE_BODY, WASTE, ROAD
+
+矿区区域类
+
+MiningZone
+
+__init__(zone_id: str, zone_type: ZoneType, vertices: List[Point2D], properties: Dict[str, Any] = None)
+方法:
+
+contains_point(point: Point2D) -> bool
+distance_to_point(point: Point2D) -> float
+
+
+
+
+
+矿物材料类
+
+OreMaterial
+
+__init__(material_id: str, name: str, grade: float = 0.0, density: float = 0.0, hardness: float = 0.0)
+
+
+
+矿区环境类
+
+MiningEnvironment(GridEnvironment)
+
+__init__(name: str, bounds: Union[BoundingBox, Tuple[float, float, float, float]], resolution: float = 1.0, config: Optional[Dict[str, Any]] = None)
+方法:
+
+私有方法: _init_terrain_grids(), _create_default_zones(), _create_circular_zone(), _create_transit_corridors(), _create_corridor(), _init_default_materials(), _apply_zone_terrain_effects(), _modify_terrain_at_point(), _generate_elevation_features(), _generate_ore_deposits(), _generate_moisture_variation(), _apply_hardness_variation(), _create_additional_paths(), _generate_random_obstacles()
+公共方法:
+
+create_terrain_features() -> None
+get_terrain_property(point: Union[Point2D, Tuple[float, float]], property_name: str) -> float
+set_terrain_property(point: Union[Point2D, Tuple[float, float]], property_name: str, value: float) -> None
+add_zone(zone: MiningZone) -> None
+get_zones_by_type(zone_type: ZoneType) -> List[MiningZone]
+get_zones_containing_point(point: Point2D) -> List[MiningZone]
+find_nearest_zone(point: Point2D, zone_type: Optional[ZoneType] = None) -> Optional[MiningZone]
+is_traversable(point: Union[Point2D, Tuple[float, float]], vehicle=None) -> bool
+calculate_traversal_cost(point: Union[Point2D, Tuple[float, float]], vehicle=None) -> float
+find_path(start: Union[Point2D, Tuple[float, float]], end: Union[Point2D, Tuple[float, float]], vehicle=None) -> List[Point2D]
+generate_random_environment() -> None
+visualize_environment() -> dict
+
+
+
+
+
+
+
+obstacle.py
+障碍物基类
+
+Obstacle(ABC, Serializable)
+
+抽象方法:
+
+contains_point(point: Point2D) -> bool
+distance_to(point: Point2D) -> float
+get_bounding_box() -> BoundingBox
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'Obstacle' (类方法)
+
+
+
+
+
+具体障碍物类
+
+PointObstacle(Obstacle): 圆形障碍物
+
+__init__(position: Point2D, radius: float = 1.0)
+
+
+RectangleObstacle(Obstacle): 矩形障碍物
+
+__init__(min_point: Point2D, max_point: Point2D)
+属性: width, height, area, center
+
+
+PolygonObstacle(Obstacle): 多边形障碍物
+
+__init__(vertices: List[Point2D])
+属性: perimeter, area, centroid
+
+
+GridObstacle: 网格单元障碍物
+
+__init__(grid_x: int, grid_y: int)
+
+
+CompositeObstacle(Obstacle): 复合障碍物
+
+__init__(obstacles: List[Obstacle])
+方法:
+
+add_obstacle(obstacle: Obstacle) -> None
+remove_obstacle(obstacle: Obstacle) -> bool
+
+
+
+
+
+任务模块 (tasks)
+base.py
+任务状态
+
+TaskStatus: PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, FAILED, CANCELED
+
+异常类
+
+TaskError(Exception)
+TaskStateError(TaskError)
+TaskAssignmentError(TaskError)
+
+任务基类
+
+Task(ABC, Serializable)
+
+__init__(task_id: Optional[str] = None, priority: int = 1, deadline: Optional[datetime] = None)
+属性: status, is_active, is_completed, is_pending, execution_time, wait_time, is_overdue, time_to_deadline, urgency
+方法:
+
+_set_status(new_status: str, force: bool = False) -> None
+assign(assignee_id: str) -> None
+start() -> None
+complete() -> None
+fail(reason: str = "") -> None
+cancel() -> None
+reset() -> None
+update_progress(progress: float) -> None
+get_duration_estimate() -> float
+get_status_history() -> List[Tuple[str, datetime]]
+to_dict() -> Dict[str, Any] (抽象)
+from_dict(data: Dict[str, Any]) -> 'Task' (抽象类方法)
+
+
+
+
+
+任务分配类
+
+TaskAssignment
+
+__init__(task: Task, assignee_id: str, estimated_duration: Optional[float] = None)
+方法:
+
+start() -> None
+complete() -> None
+fail(reason: str = "") -> None
+cancel() -> None
+update_progress(progress: float) -> None
+
+
+属性: is_active, is_completed, duration_performance
+
+
+
+task_status.py
+任务状态枚举
+
+TaskStatus(Enum): PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, FAILED, CANCELED, BLOCKED, PAUSED
+
+类方法:
+
+get_valid_transitions(current_status: 'TaskStatus') -> Set['TaskStatus']
+can_transition(current_status: 'TaskStatus', next_status: 'TaskStatus') -> bool
+is_terminal(status: 'TaskStatus') -> bool
+is_active(status: 'TaskStatus') -> bool
+
+
+
+
+
+任务优先级枚举
+
+TaskPriority(Enum): LOW = 1, NORMAL = 3, HIGH = 5, URGENT = 8, CRITICAL = 10
+
+任务类型枚举
+
+TaskType(Enum): TRANSPORT, LOADING, UNLOADING, EXCAVATION, DRILLING, MAINTENANCE, REFUELING, INSPECTION, SURVEYING, CLEANUP
+
+状态转换异常
+
+TaskStatusTransitionError(Exception)
+
+__init__(current_status: TaskStatus, target_status: TaskStatus)
+
+
+
+任务状态管理器
+
+TaskStatusManager
+
+__init__(initial_status: TaskStatus = TaskStatus.PENDING)
+属性: current_status
+方法:
+
+transition_to(target_status: TaskStatus, force: bool = False) -> bool
+get_status_history() -> List[tuple]
+get_time_in_current_status() -> float
+reset(status: TaskStatus = TaskStatus.PENDING) -> None
+
+
+
+
+
+transport_task.py
+异常类
+
+TransportTaskError(TaskError)
+
+运输任务类
+
+TransportTask(Task)
+
+__init__(start_point: Union[Point2D, Tuple[float, float]], end_point: Union[Point2D, Tuple[float, float]], task_id: Optional[str] = None, task_type: str = "transport", material_type: str = "ore", amount: float = 50000.0, priority: Union[int, TaskPriority] = TaskPriority.NORMAL, deadline: Optional[datetime] = None)
+方法:
+
+私有方法: _to_point2d(), _calculate_distance(), _estimate_load_time(), _estimate_transport_time(), _estimate_unload_time(), _update_transport_progress(), _update_task_progress(), _complete_current_phase()
+公共方法:
+
+get_duration_estimate() -> float
+set_path(path: List[Union[Point2D, Tuple[float, float]]]) -> None
+add_waypoint(waypoint: Union[Point2D, Tuple[float, float]]) -> None
+update_location(location: Union[Point2D, Tuple[float, float]]) -> None
+start_phase(phase: str) -> None
+update_phase_progress(progress: float) -> None
+update_amount(remaining: float) -> None
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'TransportTask' (类方法)
+
+
+
+
+
+
+
+装载任务类
+
+LoadingTask(TransportTask)
+
+__init__(loading_point: Union[Point2D, Tuple[float, float]], task_id: Optional[str] = None, material_type: str = "ore", amount: float = 50000.0, priority: Union[int, TaskPriority] = TaskPriority.NORMAL, deadline: Optional[datetime] = None)
+方法:
+
+get_duration_estimate() -> float
+update_loading_rate(rate: float) -> None
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'LoadingTask' (类方法)
+
+
+
+
+
+卸载任务类
+
+UnloadingTask(TransportTask)
+
+__init__(unloading_point: Union[Point2D, Tuple[float, float]], task_id: Optional[str] = None, material_type: str = "ore", amount: float = 50000.0, priority: Union[int, TaskPriority] = TaskPriority.NORMAL, deadline: Optional[datetime] = None)
+方法:
+
+get_duration_estimate() -> float
+update_unloading_rate(rate: float) -> None
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'UnloadingTask' (类方法)
+
+
+
+
+
+车辆模块 (vehicles)
+base.py
+车辆基类
+
+Vehicle(ABC, Serializable)
+
+__init__(vehicle_id: Optional[str] = None)
+属性: current_location, heading, heading_degrees, current_path, path_index, remaining_path, next_waypoint, is_at_path_end, state
+方法:
+
+update_position() (抽象)
+calculate_path_to(destination: Point2D) (抽象)
+assign_path(path: List[Union[Point2D, Tuple[float, float]]]) (抽象)
+assign_task(task) (抽象)
+move_to_next_waypoint() -> bool
+distance_to(point: Union[Point2D, Tuple[float, float]]) -> float
+direction_to(point: Union[Point2D, Tuple[float, float]]) -> Vector2D
+angle_to(point: Union[Point2D, Tuple[float, float]]) -> float
+reset_path() -> None
+
+
+
+
+
+受约束车辆类
+
+ConstrainedVehicle(Vehicle)
+
+__init__(vehicle_id: Optional[str] = None, max_speed: float = 5.0, max_acceleration: float = 2.0, max_deceleration: float = 4.0, turning_radius: float = 10.0, length: float = 5.0, width: float = 2.0)
+属性: current_speed, target_speed
+方法:
+
+update_speed(dt: float) -> None
+get_stopping_distance() -> float
+get_turning_distance(angle: float) -> float
+get_bounding_points() -> List[Point2D]
+estimate_arrival_time(destination: Point2D) -> float
+
+
+
+
+
+vehicle_state.py
+车辆状态枚举
+
+VehicleState(Enum): IDLE, PREPARING, EN_ROUTE, LOADING, UNLOADING, WAITING, EMERGENCY_STOP, MAINTENANCE, OUT_OF_SERVICE, CHARGING, FAULT
+
+类方法:
+
+get_valid_transitions(current_state: 'VehicleState') -> Set['VehicleState']
+can_transition(current_state: 'VehicleState', next_state: 'VehicleState') -> bool
+
+
+
+
+
+运输阶段枚举
+
+TransportStage(Enum): NONE, APPROACHING, LOADING, TRANSPORTING, UNLOADING, RETURNING
+
+状态转换异常
+
+VehicleStateError(Exception)
+
+__init__(current_state: VehicleState, target_state: VehicleState)
+
+
+
+车辆状态管理器
+
+VehicleStateManager
+
+__init__(initial_state: VehicleState = VehicleState.IDLE)
+属性: current_state, transport_stage
+方法:
+
+transition_to(target_state: VehicleState, force: bool = False) -> bool
+_update_transport_stage(previous_state: VehicleState, current_state: VehicleState) -> None
+get_state_history() -> List[tuple]
+get_time_in_current_status() -> float
+reset(state: VehicleState = VehicleState.IDLE) -> None
+
+
+
+
+
+mining_vehicle.py
+异常类
+
+MiningVehicleError(Exception)
+TaskAssignmentError(MiningVehicleError)
+
+矿用车辆类
+
+MiningVehicle(ConstrainedVehicle)
+
+__init__(vehicle_id: Optional[str] = None, max_speed: float = 5.0, max_capacity: float = 50000.0, terrain_capability: float = 0.7, turning_radius: float = 10.0, length: float = 5.0, width: float = 2.0, vehicle_type: str = "standard", environment = None)
+属性: state, transport_stage, load_ratio, is_loaded, is_full, is_empty, is_available, is_operational
+方法:
+
+私有方法: _handle_path_completion(), _complete_current_task(), _check_maintenance_triggers()
+公共方法:
+
+update_position(dt: float = 1.0) -> None
+assign_task(task: Any) -> None
+calculate_path_to(destination: Point2D) -> List[Point2D]
+assign_path(path: List[Union[Point2D, Tuple[float, float]]]) -> None
+load(amount: float) -> float
+unload(amount: Optional[float] = None) -> float
+perform_maintenance() -> None
+add_fault(fault_code: str, description: str = "") -> None
+clear_fault(fault_code: str) -> bool
+reset() -> None
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'MiningVehicle' (类方法)
+
+
+
+
+
+
+
+矿卡车类
+
+DumpTruck(MiningVehicle)
+
+__init__(vehicle_id: Optional[str] = None, environment = None)
+方法:
+
+raise_bed() -> bool
+lower_bed() -> bool
+update_position(dt: float = 1.0) -> None
+
+
+
+
+
+挖掘机类
+
+Excavator(MiningVehicle)
+
+__init__(vehicle_id: Optional[str] = None, environment = None)
+方法:
+
+extend_arm(position: float) -> None
+dig(amount: float) -> float
+load_vehicle(vehicle: MiningVehicle) -> float
+
+
+
+
+
+支援车辆类
+
+SupportVehicle(MiningVehicle)
+
+__init__(vehicle_id: Optional[str] = None, environment = None)
+方法:
+
+repair_vehicle(vehicle: MiningVehicle) -> List[str]
+refuel_vehicle(vehicle: MiningVehicle, amount: float) -> float
+
+露天矿多车协同调度系统 - utils目录类与函数概览
+配置管理 (config.py)
+数据类
+
+MapConfig: 地图和环境配置
+
+get_key_location(key: str) -> List[float]
+
+
+VehicleConfig: 车辆配置参数
+
+get_vehicle_spec(vehicle_type: str) -> Dict[str, Any]
+
+
+AlgorithmConfig: 算法配置参数
+LoggingConfig: 日志配置参数
+UIConfig: 用户界面配置参数
+SystemConfig: 系统总体配置，包含所有其他配置部分
+
+配置管理类
+
+ConfigManager:
+
+__init__(config_path: Optional[str] = None)
+_auto_discover_and_load() -> bool
+load_config(path: str) -> None
+save_config(path: Optional[str] = None) -> None
+as_dict() -> Dict[str, Any]
+update_from_dict(config_dict: Dict[str, Any]) -> None
+add_listener(listener: Callable[[str], None]) -> None
+remove_listener(listener: Callable[[str], None]) -> None
+_notify_listeners(section: str) -> None
+get_config() -> SystemConfig
+get_map_config() -> MapConfig
+get_vehicle_config() -> VehicleConfig
+get_algorithm_config() -> AlgorithmConfig
+get_logging_config() -> LoggingConfig
+get_ui_config() -> UIConfig
+get(section: str, key: str, default: Any = None) -> Any
+set(section: str, key: str, value: Any) -> bool
+override_from_env(prefix: str = "DISPATCH_") -> None
+
+
+
+全局函数
+
+get_config() -> SystemConfig
+load_config(path: str) -> None
+save_config(path: Optional[str] = None) -> None
+get(section: str, key: str, default: Any = None) -> Any
+set(section: str, key: str, value: Any) -> bool
+add_listener(listener: Callable[[str], None]) -> None
+remove_listener(listener: Callable[[str], None]) -> None
+
+几何模块 (geo)
+coordinates.py
+基础点类
+
+BasePoint: 所有点类型的基类
+
+distance_to(other: 'BasePoint') -> float (抽象)
+as_tuple() -> tuple (抽象)
+
+
+
+2D点类
+
+Point2D(BasePoint):
+
+__init__(x: float, y: float)
+distance_to(other: 'Point2D') -> float
+as_tuple() -> Tuple[float, float]
+from_tuple(coords: Tuple[float, float]) -> 'Point2D' (类方法)
+from_any(point: Union[Tuple[float, float], List[float], 'Point2D', 'Point3D']) -> 'Point2D' (类方法)
+midpoint(other: 'Point2D') -> 'Point2D'
+translate(dx: float, dy: float) -> 'Point2D'
+
+
+
+3D点类
+
+Point3D(BasePoint):
+
+__init__(x: float, y: float, z: float)
+distance_to(other: 'Point3D') -> float
+as_tuple() -> Tuple[float, float, float]
+to_2d() -> Point2D
+from_tuple(coords: Tuple[float, float, float]) -> 'Point3D' (类方法)
+from_2d(point: Point2D, z: float = 0.0) -> 'Point3D' (类方法)
+from_any(point: Union[Tuple, List, 'Point2D', 'Point3D'], default_z: float = 0.0) -> 'Point3D' (类方法)
+
+
+
+边界框类
+
+BoundingBox:
+
+__init__(min_point: Point2D, max_point: Point2D)
+属性: width, height, area, center
+contains_point(point: Point2D) -> bool
+intersects(other: 'BoundingBox') -> bool
+from_points(points: List[Point2D]) -> 'BoundingBox' (类方法)
+expand(margin: float) -> 'BoundingBox'
+
+
+
+工具函数
+
+normalize_to_point2d(coord: Union[tuple, list, Point2D, Point3D, object]) -> Point2D
+normalize_to_point3d(coord: Union[tuple, list, Point2D, Point3D, object], default_z: float = 0.0) -> Point3D
+
+distances.py
+距离计算函数
+
+euclidean_distance_2d(p1: Union[Tuple, List, Point2D], p2: Union[Tuple, List, Point2D]) -> float
+euclidean_distance_3d(p1: Union[Tuple, List, Point2D, Point3D], p2: Union[Tuple, List, Point2D, Point3D]) -> float
+manhattan_distance(p1: Union[Tuple, List, Point2D], p2: Union[Tuple, List, Point2D]) -> float
+cached_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float
+weighted_distance(p1: Point2D, p2: Point2D, weights: Tuple[float, float] = (1.0, 1.0)) -> float
+path_length(points: List[Union[Point2D, Tuple, List]], distance_func: DistanceFunc = euclidean_distance_2d) -> float
+
+线段和多边形距离计算
+
+point_to_segment_distance(p: Point2D, segment_start: Point2D, segment_end: Point2D) -> float
+segment_to_segment_distance(s1_start: Point2D, s1_end: Point2D, s2_start: Point2D, s2_end: Point2D) -> float
+segments_intersect(s1_start: Point2D, s1_end: Point2D, s2_start: Point2D, s2_end: Point2D) -> bool
+haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float
+point_to_polygon_distance(point: Point2D, polygon: List[Point2D]) -> float
+point_in_polygon(point: Point2D, polygon: List[Point2D]) -> bool
+
+transforms.py
+坐标变换类
+
+CoordinateTransformer:
+
+__init__(grid_size: float = 1.0, origin: Point2D = None)
+configure(grid_size: float = None, origin: Point2D = None) -> None
+grid_to_meters(grid_point: Union[Point2D, Tuple, List]) -> Point2D
+meters_to_grid(meter_point: Union[Point2D, Tuple, List]) -> Point2D
+meters_to_grid_rounded(meter_point: Union[Point2D, Tuple, List]) -> Point2D
+
+
+
+坐标变换函数
+
+rotate_point(point: Point2D, angle_rad: float, origin: Point2D = None) -> Point2D
+rotate_path(path: List[Point2D], angle_rad: float, origin: Point2D = None) -> List[Point2D]
+scale_point(point: Point2D, scale_x: float, scale_y: float = None, origin: Point2D = None) -> Point2D
+transform_point(point: Point2D, transform_matrix: np.ndarray) -> Point2D
+transform_path(path: List[Point2D], transform_matrix: np.ndarray) -> List[Point2D]
+create_transformation_matrix(translation: Tuple[float, float] = (0, 0), rotation: float = 0, scale: Tuple[float, float] = (1, 1)) -> np.ndarray
+
+路径处理函数
+
+discretize_points(path: List[Point2D], grid_size: float = 1.0) -> List[Point2D]
+interpolate_points(start: Point2D, end: Point2D, num_points: int = 10) -> List[Point2D]
+bresenham_line(start: Point2D, end: Point2D) -> List[Point2D]
+
+坐标系转换函数
+
+world_to_local(point: Point2D, reference: Point2D, reference_heading: float) -> Point2D
+local_to_world(point: Point2D, reference: Point2D, reference_heading: float) -> Point2D
+
+网格地图类
+
+GridMap:
+
+__init__(origin: Point2D = None, cell_size: float = 1.0)
+world_to_grid(point: Point2D) -> Tuple[int, int]
+grid_to_world(row: int, col: int) -> Point2D
+world_to_grid_continuous(point: Point2D) -> Point2D
+grid_continuous_to_world(point: Point2D) -> Point2D
+get_cell_bounds(row: int, col: int) -> Tuple[Point2D, Point2D]
+
+
+
+输入输出模块 (io)
+file_utils.py
+异常类
+
+FileError(Exception)
+FileNotFoundError(FileError)
+FileAccessError(FileError)
+FileFormatError(FileError)
+FileWriteError(FileError)
+FileLockError(FileError)
+
+文件操作上下文管理器
+
+safe_open(file_path: Union[str, Path], mode: str = 'r', encoding: Optional[str] = None, **kwargs) -> Iterator[Union[TextIO, BinaryIO]]
+
+基本文件读写函数
+
+read_text_file(file_path: Union[str, Path], encoding: str = 'utf-8') -> str
+write_text_file(file_path: Union[str, Path], content: str, encoding: str = 'utf-8', create_dirs: bool = True) -> None
+read_binary_file(file_path: Union[str, Path]) -> bytes
+write_binary_file(file_path: Union[str, Path], data: bytes, create_dirs: bool = True) -> None
+
+结构化文件读写函数
+
+read_json_file(file_path: Union[str, Path], encoding: str = 'utf-8') -> Dict[str, Any]
+write_json_file(file_path: Union[str, Path], data: Any, indent: int = 4, encoding: str = 'utf-8') -> None
+read_yaml_file(file_path: Union[str, Path], encoding: str = 'utf-8') -> Dict[str, Any]
+write_yaml_file(file_path: Union[str, Path], data: Any, encoding: str = 'utf-8') -> None
+read_csv_file(file_path: Union[str, Path], delimiter: str = ',', has_header: bool = True, encoding: str = 'utf-8') -> List[Dict[str, str]]
+write_csv_file(file_path: Union[str, Path], data: List[Dict[str, Any]], fieldnames: Optional[List[str]] = None, delimiter: str = ',', encoding: str = 'utf-8') -> None
+
+文件属性和格式函数
+
+get_file_extension(file_path: Union[str, Path]) -> str
+get_mime_type(file_path: Union[str, Path]) -> str
+detect_file_format(file_path: Union[str, Path]) -> str
+calculate_file_hash(file_path: Union[str, Path], algorithm: str = 'sha256') -> str
+
+目录操作函数
+
+create_directory(directory_path: Union[str, Path], exists_ok: bool = True) -> None
+list_files(directory_path: Union[str, Path], pattern: str = '*', recursive: bool = False) -> List[str]
+
+文件操作函数
+
+copy_file(source_path: Union[str, Path], target_path: Union[str, Path], overwrite: bool = True) -> None
+move_file(source_path: Union[str, Path], target_path: Union[str, Path], overwrite: bool = True) -> None
+delete_file(file_path: Union[str, Path], ignore_missing: bool = True) -> bool
+
+压缩文件操作
+
+create_zip_archive(file_paths: List[Union[str, Path]], archive_path: Union[str, Path]) -> None
+extract_zip_archive(archive_path: Union[str, Path], target_dir: Union[str, Path]) -> List[str]
+
+文件锁
+
+FileLock:
+
+__init__(lock_file: Union[str, Path], timeout: float = 10.0, retry_interval: float = 0.1)
+acquire() -> bool
+release() -> None
+
+serialization.py
+异常类
+
+SerializationError(Exception)
+DeserializationError(Exception)
+
+JSON编解码器
+
+JSONEncoder(json.JSONEncoder): 自定义JSON编码器
+
+default(self, obj)
+
+
+JSONDecoder(json.JSONDecoder): 自定义JSON解码器
+
+__init__(self, *args, **kwargs)
+register_type(self, type_name: str, cls: Type[T]) -> None
+object_hook(self, obj: Dict[str, Any]) -> Any
+
+
+
+序列化函数
+
+to_json(obj: Any, pretty: bool = False, ensure_ascii: bool = False) -> str
+from_json(json_str: str, custom_types: Dict[str, Type] = None) -> Any
+to_yaml(obj: Any, flow_style: bool = False) -> str
+from_yaml(yaml_str: str, custom_types: Dict[str, Type] = None) -> Any
+to_pickle(obj: Any) -> bytes
+from_pickle(data: bytes) -> Any
+to_base64(obj: Any) -> str
+from_base64(data: str) -> Any
+
+NumPy数组序列化
+
+serialize_numpy_array(arr: np.ndarray) -> Dict[str, Any]
+deserialize_numpy_array(data: Dict[str, Any]) -> np.ndarray
+
+序列化工具函数
+
+is_serializable(obj: Any) -> bool
+make_serializable(obj: Any) -> Any
+to_serializable_dict(obj: Any) -> Dict[str, Any]
+register_custom_types()
+
+可序列化基类
+
+Serializable: 可序列化对象的混入类
+
+to_dict(self) -> Dict[str, Any]
+to_json(self, pretty: bool = False) -> str
+to_yaml(self) -> str
+to_pickle(self) -> bytes
+to_base64(self) -> str
+from_dict(cls, data: Dict[str, Any]) -> 'Serializable' (类方法)
+from_json(cls, json_str: str) -> 'Serializable' (类方法)
+from_yaml(cls, yaml_str: str) -> 'Serializable' (类方法)
+from_pickle(cls, data: bytes) -> 'Serializable' (类方法)
+from_base64(cls, data: str) -> 'Serializable' (类方法)
+
+
+
+日志模块 (logger.py)
+枚举类
+
+LogLevel(Enum): 日志级别枚举
+
+日志格式化器
+
+LogFormatter(logging.Formatter): 自定义日志格式化器
+
+__init__(fmt: str = None, datefmt: str = None, use_colors: bool = True)
+format(record: logging.LogRecord) -> str
+
+
+
+性能追踪
+
+PerformanceTracker: 性能度量追踪器
+
+__init__(self)
+start_timer(self, operation: str) -> int
+stop_timer(self, operation: str, timer_id: int) -> float
+get_metrics(self, operation: Optional[str] = None) -> Dict[str, Any]
+reset(self, operation: Optional[str] = None) -> None
+
+
+
+日志管理器
+
+LogManager: 中心化日志管理器
+
+__init__(self, config: Optional[LoggingConfig] = None)
+_setup_console_handler(self) -> None
+_setup_file_handler(self) -> None
+_on_config_changed(self, section: str) -> None
+_reconfigure_logging(self) -> None
+get_logger(self, name: str) -> logging.Logger
+start_timer(self, operation: str) -> int
+stop_timer(self, operation: str, timer_id: int) -> float
+get_performance_metrics(self, operation: Optional[str] = None) -> Dict[str, Any]
+reset_performance_metrics(self, operation: Optional[str] = None) -> None
+_cleanup(self) -> None
+
+
+
+装饰器
+
+timed(operation: str): 函数执行时间追踪装饰器
+log_exceptions(logger_name: str = "exceptions"): 异常日志记录装饰器
+
+全局函数
+
+get_logger(name: str) -> logging.Logger
+start_timer(operation: str) -> int
+stop_timer(operation: str, timer_id: int) -> float
+get_performance_metrics(operation: Optional[str] = None) -> Dict[str, Any]
+reset_performance_metrics(operation: Optional[str] = None) -> None
+
+数学模块 (math)
+trajectories.py
+枚举类
+
+PathSmoothingMethod(Enum): 路径平滑方法枚举
+
+BEZIER, SPLINE, MOVING_AVERAGE
+
+
+PathType(Enum): 路径/轨迹类型枚举
+
+STRAIGHT_LINE, BEZIER_CURVE, SPLINE, REEDS_SHEPP, DUBINS, HYBRID
+
+
+
+路径类
+
+Path: 路径表示
+
+__init__(points: List[Union[Point2D, Tuple[float, float]]], path_type: PathType = PathType.STRAIGHT_LINE, metadata: dict = None)
+属性: length, start_point, end_point
+方法:
+
+append(point: Union[Point2D, Tuple[float, float]]) -> None
+extend(points: List[Union[Point2D, Tuple[float, float]]]) -> None
+reverse() -> 'Path'
+subsample(step: int = 1) -> 'Path'
+resample_by_distance(distance: float) -> 'Path'
+smooth(method: PathSmoothingMethod = PathSmoothingMethod.SPLINE, smoothing_factor: float = 0.5, num_points: int = 100) -> 'Path'
+私有方法: _smooth_bezier, _smooth_spline, _smooth_moving_average
+
+
+
+
+
+轨迹类
+
+Trajectory(Path): 扩展路径，包含时间信息
+
+__init__(points: List[Union[Point2D, Tuple[float, float]]], timestamps: List[float] = None, velocities: List[float] = None, path_type: PathType = PathType.STRAIGHT_LINE, metadata: dict = None)
+属性: duration, average_velocity
+方法:
+
+position_at_time(time: float) -> Optional[Point2D]
+velocity_at_time(time: float) -> Optional[float]
+heading_at_time(time: float) -> Optional[float]
+from_path_with_velocity(path: Path, velocity: float) -> 'Trajectory' (类方法)
+from_path_with_acceleration(path: Path, initial_velocity: float, acceleration: float, max_velocity: float = float('inf')) -> 'Trajectory' (类方法)
+
+
+
+
+
+路径生成函数
+
+generate_straight_line_path(start: Point2D, end: Point2D, num_points: int = 10) -> Path
+generate_circular_arc_path(center: Point2D, radius: float, start_angle: float, end_angle: float, num_points: int = 36) -> Path
+generate_bezier_path(control_points: List[Point2D], num_points: int = 100) -> Path
+generate_s_curve_path(start: Point2D, end: Point2D, curve_height: float, num_points: int = 100) -> Path
+
+路径处理函数
+
+resample_path_by_curvature(path: Path, base_distance: float = 1.0, curvature_factor: float = 0.5, min_points: int = 10) -> Path
+signed_angle_2d(v1: Vector2D, v2: Vector2D) -> float
+calculate_path_curvature(path: Path) -> List[float]
+merge_paths(paths: List[Path], connect: bool = True) -> Path
+
+vectors.py
+2D向量类
+
+Vector2D:
+
+__init__(x: float, y: float)
+运算符重载: __add__, __sub__, __mul__, __rmul__, __truediv__, __neg__
+属性: magnitude, magnitude_squared, normalized
+方法:
+
+dot(other: 'Vector2D') -> float
+cross_scalar(other: 'Vector2D') -> float
+angle_with(other: 'Vector2D') -> float
+rotate(angle_rad: float) -> 'Vector2D'
+project_onto(other: 'Vector2D') -> 'Vector2D'
+perpendicular() -> 'Vector2D'
+distance_to_line(line_start: Point2D, line_end: Point2D) -> float
+to_point2d() -> Point2D
+from_points(start: Point2D, end: Point2D) -> 'Vector2D' (类方法)
+from_magnitude_angle(magnitude: float, angle_rad: float) -> 'Vector2D' (类方法)
+
+
+
+
+
+3D向量类
+
+Vector3D:
+
+__init__(x: float, y: float, z: float)
+运算符重载: __add__, __sub__, __mul__, __rmul__, __truediv__, __neg__
+属性: magnitude, magnitude_squared, normalized
+方法:
+
+dot(other: 'Vector3D') -> float
+cross(other: 'Vector3D') -> 'Vector3D'
+angle_with(other: 'Vector3D') -> float
+project_onto(other: 'Vector3D') -> 'Vector3D'
+to_point3d() -> Point3D
+to_vector2d() -> Vector2D
+from_points(start: Point3D, end: Point3D) -> 'Vector3D' (类方法)
+from_vector2d(vector2d: Vector2D, z: float = 0.0) -> 'Vector3D' (类方法)
+
+
+
+
+
+向量工具函数
+
+normal_vector_2d(p1: Point2D, p2: Point2D) -> Vector2D
+interpolate_vectors(v1: Vector2D, v2: Vector2D, t: float) -> Vector2D
+angle_between_vectors(v1: Vector2D, v2: Vector2D) -> float
+signed_angle_2d(v1: Vector2D, v2: Vector2D) -> float
+reflect_vector(vector: Vector2D, normal: Vector2D) -> Vector2D

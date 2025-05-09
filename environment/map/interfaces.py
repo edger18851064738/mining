@@ -4,7 +4,11 @@ Map interfaces for the mining dispatch system.
 Defines the abstract interfaces that all map implementations must follow,
 including grid maps and road networks.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Set, Optional, Union, Any
 import uuid

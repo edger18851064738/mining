@@ -4,7 +4,11 @@ Grid map implementation for the mining dispatch system.
 Provides a grid-based map representation, where the environment is divided
 into cells of uniform size.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 import math
 import numpy as np
 from typing import Dict, List, Tuple, Set, Optional, Union, Any, Callable

@@ -4,7 +4,11 @@ Point class implementations for the mining dispatch system.
 These are wrapper classes around the utils.geo.coordinates Point classes,
 providing additional functionality specific to the environment module.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 import math
 from typing import Tuple, List, Union, Optional, Any
 

@@ -1,0 +1,79 @@
+3. coordination/allocation 模块
+base.py
+外部库导入:
+pythonimport abc
+from enum import Enum, auto
+from typing import Dict, List, Set, Tuple, Any, Optional, TypeVar, Generic
+from dataclasses import dataclass, field
+import time
+内部模块导入:
+pythonfrom utils.logger import get_logger
+类和枚举:
+
+AllocationStrategy(Enum): 任务分配策略枚举
+AllocationStatus(Enum): 分配结果状态枚举
+AllocationObjective(Enum): 优化目标枚举
+AllocationConfig(dataclass): 任务分配配置
+AllocationResult(dataclass): 分配结果
+TaskAllocator(abc.ABC): 任务分配器抽象基类
+
+TaskAllocator方法:
+pythondef __init__(self, config: Optional[AllocationConfig] = None)
+@abc.abstractmethod
+def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+@abc.abstractmethod
+def reallocate(self, current_allocations: Dict[str, List[str]], new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+def get_strategy(self) -> AllocationStrategy
+def set_config(self, config: AllocationConfig) -> None
+def validate_allocation(self, allocation: Dict[str, List[str]], tasks: Dict[str, Any], vehicles: Dict[str, Any]) -> bool
+def calculate_objective_value(self, allocation: Dict[str, List[str]], tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Dict[Tuple[str, str], float]) -> float
+priority_allocator.py
+外部库导入:
+pythonfrom typing import Dict, List, Set, Tuple, Any, Optional
+import time
+import heapq
+from collections import defaultdict
+内部模块导入:
+pythonfrom utils.logger import get_logger, timed
+from coordination.allocation.base import (
+    TaskAllocator, AllocationConfig, AllocationResult, 
+    AllocationStatus, AllocationStrategy, AllocationObjective
+)
+类:
+
+PriorityAllocator(TaskAllocator): 基于优先级的任务分配器
+
+PriorityAllocator方法:
+pythondef __init__(self, config: Optional[AllocationConfig] = None)
+@timed("priority_allocation")
+def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+@timed("priority_reallocation")
+def reallocate(self, current_allocations: Dict[str, List[str]], new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+def _create_default_cost_matrix(self, tasks: Dict[str, Any], vehicles: Dict[str, Any]) -> Dict[Tuple[str, str], float]
+def _is_vehicle_suitable(self, vehicle: Any, task: Any) -> bool
+miqp_allocator.py
+外部库导入:
+pythonfrom typing import Dict, List, Set, Tuple, Any, Optional
+import time
+import numpy as np
+内部模块导入:
+pythonfrom utils.logger import get_logger, timed
+from coordination.allocation.base import (
+    TaskAllocator, AllocationConfig, AllocationResult, 
+    AllocationStatus, AllocationStrategy, AllocationObjective
+)
+类:
+
+MIQPAllocator(TaskAllocator): 基于混合整数二次规划的任务分配器
+
+MIQPAllocator方法:
+pythondef __init__(self, config: Optional[AllocationConfig] = None)
+@timed("miqp_allocation")
+def allocate(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+@timed("miqp_reallocation")
+def reallocate(self, current_allocations: Dict[str, List[str]], new_tasks: Dict[str, Any], available_vehicles: Dict[str, Any], cost_matrix: Optional[Dict[Tuple[str, str], float]] = None) -> AllocationResult
+def _create_default_cost_matrix(self, tasks: Dict[str, Any], vehicles: Dict[str, Any]) -> Dict[Tuple[str, str], float]
+def _is_vehicle_suitable(self, vehicle: Any, task: Any) -> bool
+def _solve_with_pulp(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult
+def _solve_with_gurobi(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult
+def _solve_with_cvxpy(self, tasks: Dict[str, Any], vehicles: Dict[str, Any], cost_matrix: Dict[Tuple[str, str], float], start_time: float) -> AllocationResult

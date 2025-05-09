@@ -4,7 +4,11 @@ Coordinate transformation utilities for the mining dispatch system.
 Provides functions for converting between different coordinate systems,
 including grid/meter conversions and transformations between local and global coordinates.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 import math
 from typing import Tuple, List, Union, Dict, Optional, Any
 import numpy as np

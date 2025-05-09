@@ -9,7 +9,11 @@ import numpy as np
 from typing import List, Tuple, Union, Optional, Callable
 from enum import Enum, auto
 from scipy.interpolate import splprep, splev
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 from utils.geo.coordinates import Point2D, Point3D
 from utils.math.vectors import Vector2D, Vector3D
 

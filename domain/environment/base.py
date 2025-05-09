@@ -4,7 +4,11 @@ Base environment definitions for the mining dispatch system.
 Defines the abstract environment interface and common environment behavior.
 All specific environment types should inherit from these base classes.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 from abc import ABC, abstractmethod
 import uuid
 from typing import Dict, List, Tuple, Optional, Any, Set, Union, Callable

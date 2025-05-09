@@ -1,0 +1,493 @@
+露天矿多车协同调度系统 - domain目录类与函数概览
+环境模块 (environment)
+base.py
+异常类
+
+EnvironmentError(Exception)
+
+基础环境类
+
+Environment(ABC, Serializable)
+
+__init__(name: str, bounds: Union[BoundingBox, Tuple[float, float, float, float]], resolution: float = 1.0)
+属性: width, height, center, obstacles, key_locations
+方法:
+
+add_obstacle(point: Union[Point2D, Tuple[float, float]]) -> None
+add_obstacles(points: List[Union[Point2D, Tuple[float, float]]]) -> None
+remove_obstacle(point: Union[Point2D, Tuple[float, float]]) -> bool
+clear_obstacles() -> None
+add_key_location(name: str, point: Union[Point2D, Tuple[float, float]]) -> None
+remove_key_location(name: str) -> bool
+get_key_location(name: str) -> Optional[Point2D]
+is_obstacle(point: Union[Point2D, Tuple[float, float]]) -> bool (抽象)
+is_traversable(point: Union[Point2D, Tuple[float, float]], vehicle=None) -> bool (抽象)
+find_path(start: Union[Point2D, Tuple[float, float]], end: Union[Point2D, Tuple[float, float]], vehicle=None) -> List[Point2D] (抽象)
+to_dict() -> Dict[str, Any]
+
+
+
+
+
+网格环境类
+
+GridEnvironment(Environment)
+
+__init__(name: str, bounds: Union[BoundingBox, Tuple[float, float, float, float]], resolution: float = 1.0)
+方法:
+
+_point_to_grid(point: Union[Point2D, Tuple[float, float]]) -> Tuple[int, int]
+_grid_to_point(grid_x: int, grid_y: int) -> Point2D
+add_obstacle(point: Union[Point2D, Tuple[float, float]]) -> None
+remove_obstacle(point: Union[Point2D, Tuple[float, float]]) -> bool
+clear_obstacles() -> None
+set_terrain_property(point: Union[Point2D, Tuple[float, float]], hardness: float) -> None
+get_terrain_property(point: Union[Point2D, Tuple[float, float]]) -> float
+is_obstacle(point: Union[Point2D, Tuple[float, float]]) -> bool
+is_traversable(point: Union[Point2D, Tuple[float, float]], vehicle=None) -> bool
+find_path(start: Union[Point2D, Tuple[float, float]], end: Union[Point2D, Tuple[float, float]], vehicle=None) -> List[Point2D]
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'GridEnvironment' (类方法)
+
+
+
+
+
+mining_environment.py
+枚举类
+
+ZoneType(Enum): LOADING, UNLOADING, PARKING, CHARGING, MAINTENANCE, EXCAVATION, DRILLING, BLASTING, RESTRICTED, TRANSIT
+TerrainType(Enum): SOLID_ROCK, LOOSE_ROCK, GRAVEL, DIRT, CLAY, SAND, WATER, ORE_BODY, WASTE, ROAD
+
+矿区区域类
+
+MiningZone
+
+__init__(zone_id: str, zone_type: ZoneType, vertices: List[Point2D], properties: Dict[str, Any] = None)
+方法:
+
+contains_point(point: Point2D) -> bool
+distance_to_point(point: Point2D) -> float
+
+
+
+
+
+矿物材料类
+
+OreMaterial
+
+__init__(material_id: str, name: str, grade: float = 0.0, density: float = 0.0, hardness: float = 0.0)
+
+
+
+矿区环境类
+
+MiningEnvironment(GridEnvironment)
+
+__init__(name: str, bounds: Union[BoundingBox, Tuple[float, float, float, float]], resolution: float = 1.0, config: Optional[Dict[str, Any]] = None)
+方法:
+
+私有方法: _init_terrain_grids(), _create_default_zones(), _create_circular_zone(), _create_transit_corridors(), _create_corridor(), _init_default_materials(), _apply_zone_terrain_effects(), _modify_terrain_at_point(), _generate_elevation_features(), _generate_ore_deposits(), _generate_moisture_variation(), _apply_hardness_variation(), _create_additional_paths(), _generate_random_obstacles()
+公共方法:
+
+create_terrain_features() -> None
+get_terrain_property(point: Union[Point2D, Tuple[float, float]], property_name: str) -> float
+set_terrain_property(point: Union[Point2D, Tuple[float, float]], property_name: str, value: float) -> None
+add_zone(zone: MiningZone) -> None
+get_zones_by_type(zone_type: ZoneType) -> List[MiningZone]
+get_zones_containing_point(point: Point2D) -> List[MiningZone]
+find_nearest_zone(point: Point2D, zone_type: Optional[ZoneType] = None) -> Optional[MiningZone]
+is_traversable(point: Union[Point2D, Tuple[float, float]], vehicle=None) -> bool
+calculate_traversal_cost(point: Union[Point2D, Tuple[float, float]], vehicle=None) -> float
+find_path(start: Union[Point2D, Tuple[float, float]], end: Union[Point2D, Tuple[float, float]], vehicle=None) -> List[Point2D]
+generate_random_environment() -> None
+visualize_environment() -> dict
+
+
+
+
+
+
+
+obstacle.py
+障碍物基类
+
+Obstacle(ABC, Serializable)
+
+抽象方法:
+
+contains_point(point: Point2D) -> bool
+distance_to(point: Point2D) -> float
+get_bounding_box() -> BoundingBox
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'Obstacle' (类方法)
+
+
+
+
+
+具体障碍物类
+
+PointObstacle(Obstacle): 圆形障碍物
+
+__init__(position: Point2D, radius: float = 1.0)
+
+
+RectangleObstacle(Obstacle): 矩形障碍物
+
+__init__(min_point: Point2D, max_point: Point2D)
+属性: width, height, area, center
+
+
+PolygonObstacle(Obstacle): 多边形障碍物
+
+__init__(vertices: List[Point2D])
+属性: perimeter, area, centroid
+
+
+GridObstacle: 网格单元障碍物
+
+__init__(grid_x: int, grid_y: int)
+
+
+CompositeObstacle(Obstacle): 复合障碍物
+
+__init__(obstacles: List[Obstacle])
+方法:
+
+add_obstacle(obstacle: Obstacle) -> None
+remove_obstacle(obstacle: Obstacle) -> bool
+
+
+
+
+
+任务模块 (tasks)
+base.py
+任务状态
+
+TaskStatus: PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, FAILED, CANCELED
+
+异常类
+
+TaskError(Exception)
+TaskStateError(TaskError)
+TaskAssignmentError(TaskError)
+
+任务基类
+
+Task(ABC, Serializable)
+
+__init__(task_id: Optional[str] = None, priority: int = 1, deadline: Optional[datetime] = None)
+属性: status, is_active, is_completed, is_pending, execution_time, wait_time, is_overdue, time_to_deadline, urgency
+方法:
+
+_set_status(new_status: str, force: bool = False) -> None
+assign(assignee_id: str) -> None
+start() -> None
+complete() -> None
+fail(reason: str = "") -> None
+cancel() -> None
+reset() -> None
+update_progress(progress: float) -> None
+get_duration_estimate() -> float
+get_status_history() -> List[Tuple[str, datetime]]
+to_dict() -> Dict[str, Any] (抽象)
+from_dict(data: Dict[str, Any]) -> 'Task' (抽象类方法)
+
+
+
+
+
+任务分配类
+
+TaskAssignment
+
+__init__(task: Task, assignee_id: str, estimated_duration: Optional[float] = None)
+方法:
+
+start() -> None
+complete() -> None
+fail(reason: str = "") -> None
+cancel() -> None
+update_progress(progress: float) -> None
+
+
+属性: is_active, is_completed, duration_performance
+
+
+
+task_status.py
+任务状态枚举
+
+TaskStatus(Enum): PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, FAILED, CANCELED, BLOCKED, PAUSED
+
+类方法:
+
+get_valid_transitions(current_status: 'TaskStatus') -> Set['TaskStatus']
+can_transition(current_status: 'TaskStatus', next_status: 'TaskStatus') -> bool
+is_terminal(status: 'TaskStatus') -> bool
+is_active(status: 'TaskStatus') -> bool
+
+
+
+
+
+任务优先级枚举
+
+TaskPriority(Enum): LOW = 1, NORMAL = 3, HIGH = 5, URGENT = 8, CRITICAL = 10
+
+任务类型枚举
+
+TaskType(Enum): TRANSPORT, LOADING, UNLOADING, EXCAVATION, DRILLING, MAINTENANCE, REFUELING, INSPECTION, SURVEYING, CLEANUP
+
+状态转换异常
+
+TaskStatusTransitionError(Exception)
+
+__init__(current_status: TaskStatus, target_status: TaskStatus)
+
+
+
+任务状态管理器
+
+TaskStatusManager
+
+__init__(initial_status: TaskStatus = TaskStatus.PENDING)
+属性: current_status
+方法:
+
+transition_to(target_status: TaskStatus, force: bool = False) -> bool
+get_status_history() -> List[tuple]
+get_time_in_current_status() -> float
+reset(status: TaskStatus = TaskStatus.PENDING) -> None
+
+
+
+
+
+transport_task.py
+异常类
+
+TransportTaskError(TaskError)
+
+运输任务类
+
+TransportTask(Task)
+
+__init__(start_point: Union[Point2D, Tuple[float, float]], end_point: Union[Point2D, Tuple[float, float]], task_id: Optional[str] = None, task_type: str = "transport", material_type: str = "ore", amount: float = 50000.0, priority: Union[int, TaskPriority] = TaskPriority.NORMAL, deadline: Optional[datetime] = None)
+方法:
+
+私有方法: _to_point2d(), _calculate_distance(), _estimate_load_time(), _estimate_transport_time(), _estimate_unload_time(), _update_transport_progress(), _update_task_progress(), _complete_current_phase()
+公共方法:
+
+get_duration_estimate() -> float
+set_path(path: List[Union[Point2D, Tuple[float, float]]]) -> None
+add_waypoint(waypoint: Union[Point2D, Tuple[float, float]]) -> None
+update_location(location: Union[Point2D, Tuple[float, float]]) -> None
+start_phase(phase: str) -> None
+update_phase_progress(progress: float) -> None
+update_amount(remaining: float) -> None
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'TransportTask' (类方法)
+
+
+
+
+
+
+
+装载任务类
+
+LoadingTask(TransportTask)
+
+__init__(loading_point: Union[Point2D, Tuple[float, float]], task_id: Optional[str] = None, material_type: str = "ore", amount: float = 50000.0, priority: Union[int, TaskPriority] = TaskPriority.NORMAL, deadline: Optional[datetime] = None)
+方法:
+
+get_duration_estimate() -> float
+update_loading_rate(rate: float) -> None
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'LoadingTask' (类方法)
+
+
+
+
+
+卸载任务类
+
+UnloadingTask(TransportTask)
+
+__init__(unloading_point: Union[Point2D, Tuple[float, float]], task_id: Optional[str] = None, material_type: str = "ore", amount: float = 50000.0, priority: Union[int, TaskPriority] = TaskPriority.NORMAL, deadline: Optional[datetime] = None)
+方法:
+
+get_duration_estimate() -> float
+update_unloading_rate(rate: float) -> None
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'UnloadingTask' (类方法)
+
+
+
+
+
+车辆模块 (vehicles)
+base.py
+车辆基类
+
+Vehicle(ABC, Serializable)
+
+__init__(vehicle_id: Optional[str] = None)
+属性: current_location, heading, heading_degrees, current_path, path_index, remaining_path, next_waypoint, is_at_path_end, state
+方法:
+
+update_position() (抽象)
+calculate_path_to(destination: Point2D) (抽象)
+assign_path(path: List[Union[Point2D, Tuple[float, float]]]) (抽象)
+assign_task(task) (抽象)
+move_to_next_waypoint() -> bool
+distance_to(point: Union[Point2D, Tuple[float, float]]) -> float
+direction_to(point: Union[Point2D, Tuple[float, float]]) -> Vector2D
+angle_to(point: Union[Point2D, Tuple[float, float]]) -> float
+reset_path() -> None
+
+
+
+
+
+受约束车辆类
+
+ConstrainedVehicle(Vehicle)
+
+__init__(vehicle_id: Optional[str] = None, max_speed: float = 5.0, max_acceleration: float = 2.0, max_deceleration: float = 4.0, turning_radius: float = 10.0, length: float = 5.0, width: float = 2.0)
+属性: current_speed, target_speed
+方法:
+
+update_speed(dt: float) -> None
+get_stopping_distance() -> float
+get_turning_distance(angle: float) -> float
+get_bounding_points() -> List[Point2D]
+estimate_arrival_time(destination: Point2D) -> float
+
+
+
+
+
+vehicle_state.py
+车辆状态枚举
+
+VehicleState(Enum): IDLE, PREPARING, EN_ROUTE, LOADING, UNLOADING, WAITING, EMERGENCY_STOP, MAINTENANCE, OUT_OF_SERVICE, CHARGING, FAULT
+
+类方法:
+
+get_valid_transitions(current_state: 'VehicleState') -> Set['VehicleState']
+can_transition(current_state: 'VehicleState', next_state: 'VehicleState') -> bool
+
+
+
+
+
+运输阶段枚举
+
+TransportStage(Enum): NONE, APPROACHING, LOADING, TRANSPORTING, UNLOADING, RETURNING
+
+状态转换异常
+
+VehicleStateError(Exception)
+
+__init__(current_state: VehicleState, target_state: VehicleState)
+
+
+
+车辆状态管理器
+
+VehicleStateManager
+
+__init__(initial_state: VehicleState = VehicleState.IDLE)
+属性: current_state, transport_stage
+方法:
+
+transition_to(target_state: VehicleState, force: bool = False) -> bool
+_update_transport_stage(previous_state: VehicleState, current_state: VehicleState) -> None
+get_state_history() -> List[tuple]
+get_time_in_current_status() -> float
+reset(state: VehicleState = VehicleState.IDLE) -> None
+
+
+
+
+
+mining_vehicle.py
+异常类
+
+MiningVehicleError(Exception)
+TaskAssignmentError(MiningVehicleError)
+
+矿用车辆类
+
+MiningVehicle(ConstrainedVehicle)
+
+__init__(vehicle_id: Optional[str] = None, max_speed: float = 5.0, max_capacity: float = 50000.0, terrain_capability: float = 0.7, turning_radius: float = 10.0, length: float = 5.0, width: float = 2.0, vehicle_type: str = "standard", environment = None)
+属性: state, transport_stage, load_ratio, is_loaded, is_full, is_empty, is_available, is_operational
+方法:
+
+私有方法: _handle_path_completion(), _complete_current_task(), _check_maintenance_triggers()
+公共方法:
+
+update_position(dt: float = 1.0) -> None
+assign_task(task: Any) -> None
+calculate_path_to(destination: Point2D) -> List[Point2D]
+assign_path(path: List[Union[Point2D, Tuple[float, float]]]) -> None
+load(amount: float) -> float
+unload(amount: Optional[float] = None) -> float
+perform_maintenance() -> None
+add_fault(fault_code: str, description: str = "") -> None
+clear_fault(fault_code: str) -> bool
+reset() -> None
+to_dict() -> Dict[str, Any]
+from_dict(data: Dict[str, Any]) -> 'MiningVehicle' (类方法)
+
+
+
+
+
+
+
+矿卡车类
+
+DumpTruck(MiningVehicle)
+
+__init__(vehicle_id: Optional[str] = None, environment = None)
+方法:
+
+raise_bed() -> bool
+lower_bed() -> bool
+update_position(dt: float = 1.0) -> None
+
+
+
+
+
+挖掘机类
+
+Excavator(MiningVehicle)
+
+__init__(vehicle_id: Optional[str] = None, environment = None)
+方法:
+
+extend_arm(position: float) -> None
+dig(amount: float) -> float
+load_vehicle(vehicle: MiningVehicle) -> float
+
+
+
+
+
+支援车辆类
+
+SupportVehicle(MiningVehicle)
+
+__init__(vehicle_id: Optional[str] = None, environment = None)
+方法:
+
+repair_vehicle(vehicle: MiningVehicle) -> List[str]
+refuel_vehicle(vehicle: MiningVehicle, amount: float) -> float

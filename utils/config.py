@@ -10,6 +10,8 @@ Provides a centralized configuration system that supports:
 
 import os
 import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 import yaml
 import logging

@@ -4,7 +4,11 @@ Road network map implementation for the mining dispatch system.
 Provides a road network representation of the environment, with nodes
 connected by roads of various types and properties.
 """
-
+import os
+import sys
+# 添加项目根目录到路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 import math
 import networkx as nx
 from typing import Dict, List, Tuple, Set, Optional, Union, Any, Callable

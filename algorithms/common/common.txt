@@ -1,0 +1,87 @@
+2. algorithms/common 模块
+graph.py
+外部库导入:
+pythonfrom enum import Enum
+from typing import Dict, List, Set, Tuple, Any, Optional, TypeVar, Generic, Callable, Iterable
+from dataclasses import dataclass, field
+import heapq
+import math
+内部模块导入:
+pythonfrom utils.logger import get_logger
+类和枚举:
+
+EdgeType(Enum): 图边类型枚举
+Edge(Generic[T], dataclass): 图边表示
+Graph(Generic[T]): 通用图数据结构
+GridGraph(Graph[Tuple[int, int]]): 网格图表示
+WeightedGraph(Graph[T]): 带权图表示
+
+Graph方法:
+pythondef __init__(self)
+def add_node(self, node: T, **metadata) -> None
+def add_edge(self, source: T, target: T, cost: float = 1.0, edge_type: EdgeType = EdgeType.DIRECTED, **metadata) -> None
+def remove_node(self, node: T) -> None
+def remove_edge(self, source: T, target: T) -> None
+def get_neighbors(self, node: T) -> List[T]
+def get_edges(self, node: T) -> List[Edge[T]]
+def get_edge(self, source: T, target: T) -> Optional[Edge[T]]
+def get_edge_cost(self, source: T, target: T) -> float
+def has_node(self, node: T) -> bool
+def has_edge(self, source: T, target: T) -> bool
+def node_count(self) -> int
+def edge_count(self) -> int
+def get_all_edges(self) -> List[Edge[T]]
+def is_directed(self) -> bool
+def get_connected_components(self) -> List[Set[T]]
+def to_dict(self) -> Dict[str, Any]
+GridGraph方法:
+pythondef __init__(self, width: int, height: int, diagonal: bool = True)
+def _generate_grid(self) -> None
+def set_obstacle(self, x: int, y: int, is_obstacle: bool = True) -> None
+def is_obstacle(self, x: int, y: int) -> bool
+def is_valid_position(self, x: int, y: int) -> bool
+def set_cost_modifier(self, x: int, y: int, modifier: float) -> None
+def get_path_cost(self, path: List[Tuple[int, int]]) -> float
+WeightedGraph方法:
+pythondef get_minimum_spanning_tree(self) -> 'WeightedGraph[T]'
+def get_shortest_path_tree(self, source: T) -> 'WeightedGraph[T]'
+模块函数:
+pythondef grid_to_graph(grid: List[List[bool]], diagonal: bool = True) -> GridGraph
+def build_visibility_graph(obstacles: List[List[Tuple[float, float]]], add_points: List[Tuple[float, float]] = None) -> Graph[Tuple[float, float]]
+search.py
+外部库导入:
+pythonimport heapq
+import math
+from typing import Dict, List, Set, Tuple, Any, Optional, TypeVar, Generic, Callable, Iterable
+from dataclasses import dataclass, field
+import time
+内部模块导入:
+pythonfrom utils.logger import get_logger, timed
+from algorithms.common.graph import Graph, Edge, EdgeType
+类:
+
+SearchResult(Generic[T], dataclass): 搜索结果
+Search: 搜索算法静态类
+
+Search静态方法:
+python@staticmethod
+@timed("breadth_first_search")
+def breadth_first_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]
+@staticmethod
+@timed("depth_first_search")
+def depth_first_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]
+@staticmethod
+@timed("dijkstra")
+def dijkstra(graph: Graph[T], start: T, goal: Optional[T] = None) -> SearchResult[T]
+@staticmethod
+@timed("a_star")
+def a_star(graph: Graph[T], start: T, goal: T, heuristic: Callable[[T, T], float]) -> SearchResult[T]
+@staticmethod
+@timed("bidirectional_search")
+def bidirectional_search(graph: Graph[T], start: T, goal: T) -> SearchResult[T]
+模块函数:
+pythondef manhattan_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float
+def euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float
+def diagonal_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float
+def chebyshev_distance(p1: Tuple[int, int], p2: Tuple[int, int]) -> float
+def smooth_path(path: List[T], max_deviation: float = 1.0) -> List[T]
